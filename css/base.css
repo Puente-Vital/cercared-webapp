@@ -1,0 +1,44 @@
+:root {
+  --color-primary: #1e4e8c;
+  --color-primary-hover: #163b6a;
+  --color-accent: #f97316;
+  --color-accent-hover: #ea580c;
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-soft: #eaf4ff;
+  --color-text: #1f2937;
+  --color-muted: #6b7280;
+  --color-border: #d1d5db;
+  --shadow-soft: 0 14px 36px rgba(30, 78, 140, 0.12);
+  --header-height: 72px;
+  --container: 1312px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--header-height) + 24px);
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", Arial, sans-serif;
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+}
+
+main section {
+  min-height: 1px;
+}
