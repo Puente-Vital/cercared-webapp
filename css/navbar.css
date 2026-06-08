@@ -1,44 +1,3 @@
-:root {
-  --color-primary: #1e4e8c;
-  --color-primary-hover: #163b6a;
-  --color-accent: #f97316;
-  --color-accent-hover: #ea580c;
-  --color-background: #f8fafc;
-  --color-surface: #ffffff;
-  --color-soft: #eaf4ff;
-  --color-text: #1f2937;
-  --color-muted: #6b7280;
-  --color-border: #d1d5db;
-  --shadow-soft: 0 14px 36px rgba(30, 78, 140, 0.12);
-  --header-height: 72px;
-  --container: 1312px;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html {
-  scroll-behavior: smooth;
-  scroll-padding-top: calc(var(--header-height) + 24px);
-}
-
-body {
-  margin: 0;
-  font-family: "Inter", Arial, sans-serif;
-  color: var(--color-text);
-  background: var(--color-surface);
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-button {
-  font: inherit;
-}
-
 .site-header {
   position: sticky;
   top: 0;
@@ -101,14 +60,11 @@ button {
   min-height: 48px;
   padding: 0 30px;
   border-radius: 8px;
+  color: var(--color-surface);
+  background: var(--color-primary);
   font-size: 16px;
   font-weight: 600;
   transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
-}
-
-.nav-cta {
-  color: var(--color-surface);
-  background: var(--color-primary);
 }
 
 .nav-cta:hover,
@@ -134,10 +90,6 @@ button {
   margin: 4px auto;
   background: var(--color-primary);
   border-radius: 999px;
-}
-
-main section {
-  min-height: 1px;
 }
 
 @media (max-width: 900px) {
