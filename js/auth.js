@@ -246,5 +246,23 @@ document.addEventListener('DOMContentLoaded', () => {
       alert("El inicio de sesión con redes sociales estará disponible en la próxima versión.");
     });
   });
+
+  const forgotPasswordLink = document.getElementById('forgotPassword');
   
+  forgotPasswordLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    
+    const emailPrompt = prompt("Por favor, ingresa tu correo electrónico para restablecer tu contraseña:");
+    
+    if (emailPrompt === null) {
+      return; // El usuario canceló el prompt
+    }
+    
+    if (emailPrompt.trim() === "") {
+      alert("Debes ingresar un correo electrónico válido.");
+    } else {
+      alert(`Se ha enviado un enlace de restablecimiento al correo: ${emailPrompt}. (Simulación de sistema)`);
+    }
+  });
+
 });
