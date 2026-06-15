@@ -238,14 +238,14 @@ body {
 }
 
 .service-description {
-  display: -webkit-box;
-  margin: 0 0 var(--space-4);
+  display: block;
+  max-height: 96px;
   overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0 0 var(--space-4);
   color: var(--color-muted);
   font-size: 16px;
   line-height: 24px;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
 }
 
 .card-actions {

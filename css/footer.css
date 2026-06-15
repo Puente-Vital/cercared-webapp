@@ -50,6 +50,9 @@
   display: none;
 }
 
+.auth-footer-mobile {
+  display: none;
+}
 
 @media (max-width: 768px) {
   .main-footer {
