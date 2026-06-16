@@ -4,7 +4,6 @@
 }
 
 .save-button.is-saved img {
-
   filter: brightness(0) invert(1);
 }
 
@@ -36,4 +35,11 @@
 .saved-toast.is-visible {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+.remove-button:hover,
+.remove-button:focus-visible {
+  border-color: var(--color-error);
+  color: var(--color-error);
+  background: #fdecec;
 }
