@@ -27,7 +27,7 @@
         <button class="details-button" type="button">Ver detalle</button>
         <button class="share-button remove-button" type="button">Quitar de guardados</button>
       </div>`;
-
+//falta unificar el detail.html #1
     article.querySelector(".details-button").addEventListener("click", () => {
       window.location.href = "detail.html?id=" + encodeURIComponent(service.id || toId(service.name));
     });
