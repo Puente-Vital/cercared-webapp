@@ -97,16 +97,17 @@ document.addEventListener('DOMContentLoaded', () => {
       const users = getUsers();
       const existingUser = users.find(u => u.email === emailValue);
 
-      if (!existingUser) {
-        loginEmail.classList.add('input-error');
-        loginEmailError.textContent = "Este correo no está registrado.";
-      } else if (existingUser.password !== passwordValue) {
-        loginPassword.classList.add('input-error');
-        loginPasswordError.textContent = "Contraseña incorrecta.";
-      } else {
-        alert(`¡Bienvenido de nuevo, ${existingUser.name}! Has iniciado sesión correctamente.`);
-        loginForm.reset();
-      }
+    if (!existingUser) {
+            loginEmail.classList.add('input-error');
+            loginEmailError.textContent = "Este correo no está registrado.";
+          } else if (existingUser.password !== passwordValue) {
+            loginPassword.classList.add('input-error');
+            loginPasswordError.textContent = "Contraseña incorrecta.";
+          } else {
+                  localStorage.setItem('cercared_currentUser', JSON.stringify(existingUser));                 
+                  loginForm.reset();                
+                  window.location.href = 'index.html';
+                }
     }
   });
 
@@ -242,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   socialButtons.forEach(button => {
     button.addEventListener('click', (e) => {
-      e.preventDefault(); // Evita que la página intente cargar algo
+      e.preventDefault();
       alert("El inicio de sesión con redes sociales estará disponible en la próxima versión.");
     });
   });
@@ -255,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const emailPrompt = prompt("Por favor, ingresa tu correo electrónico para restablecer tu contraseña:");
     
     if (emailPrompt === null) {
-      return; // El usuario canceló el prompt
+      return;
     }
     
     if (emailPrompt.trim() === "") {
