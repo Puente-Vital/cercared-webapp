@@ -262,6 +262,17 @@ body {
   cursor: pointer;
 }
 
+.card-actions a {
+  display: inline-flex;
+  min-height: 64px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .details-button {
   border: 1px solid var(--color-primary);
   color: var(--color-surface);
