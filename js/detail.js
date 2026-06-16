@@ -163,16 +163,107 @@ function renderServiceDetail(data) {
             Obtén una guía resumida con los requisitos principales y los pasos
             para acceder a ${data.name}, lista para compartir con tu familiar.
           </p>
-          <button type="button">Generar resumen</button>
+          <button class="summary-button" type="button">Generar resumen</button>
         </section>
 
         <div class="sidebar-actions">
-          <button type="button">Guardar</button>
-          <button type="button">Compartir</button>
+          <button class="detail-save-button" type="button" aria-pressed="false">Guardar</button>
+          <button class="detail-share-button" type="button">Compartir</button>
         </div>
       </aside>
     </div>
   `;
+
+  wireDetailActions(data);
+}
+
+function getShareUrl(serviceId) {
+  const basePath = window.location.pathname.replace(/[^/]*$/, "");
+  return `${window.location.origin}${basePath}detail.html?id=${encodeURIComponent(serviceId)}`;
+}
+
+function toSavedService(data) {
+  return {
+    id: data.id,
+    name: data.name,
+    entity: data.entity,
+    category: data.category,
+    description: data.shortDescription,
+    url: getShareUrl(data.id),
+  };
+}
+
+function buildSummary(data) {
+  const requirements = data.requirements.map((item) => `- ${item.title}`).join("\n");
+  const steps = data.steps.map((item, index) => `${index + 1}. ${item.title}`).join("\n");
+  return `${data.name}\n\nRequisitos principales:\n${requirements}\n\nPasos:\n${steps}\n\nCanal oficial: ${data.officialUrl}`;
+}
+
+function showDetailToast(message) {
+  let toast = document.querySelector("#detail-toast");
+  if (!toast) {
+    toast = Object.assign(document.createElement("div"), {
+      id: "detail-toast",
+      className: "saved-toast",
+    });
+    toast.setAttribute("role", "status");
+    document.body.appendChild(toast);
+  }
+
+  toast.textContent = message;
+  toast.classList.add("is-visible");
+  window.clearTimeout(showDetailToast.timer);
+  showDetailToast.timer = window.setTimeout(
+    () => toast.classList.remove("is-visible"),
+    2400,
+  );
+}
+
+async function copySummary(data) {
+  const summary = buildSummary(data);
+  try {
+    await navigator.clipboard.writeText(summary);
+    showDetailToast("Resumen copiado");
+  } catch {
+    window.prompt("Copia el resumen del trámite:", summary);
+  }
+}
+
+function wireDetailActions(data) {
+  const savedService = toSavedService(data);
+  const saveButton = document.querySelector(".detail-save-button");
+  const shareButton = document.querySelector(".detail-share-button");
+  const summaryButton = document.querySelector(".summary-button");
+
+  function updateSaveState() {
+    const saved = window.CercaRedSaved?.isSaved(savedService) || false;
+    saveButton.classList.toggle("is-saved", saved);
+    saveButton.setAttribute("aria-pressed", String(saved));
+    saveButton.textContent = saved ? "Guardado" : "Guardar";
+  }
+
+  updateSaveState();
+
+  saveButton.addEventListener("click", () => {
+    if (!window.CercaRedSaved?.isLoggedIn()) {
+      window.location.href = "auth.html";
+      return;
+    }
+
+    const saved = window.CercaRedSaved.toggleSaved(savedService);
+    updateSaveState();
+    showDetailToast(saved ? "Servicio guardado" : "Se quitó de los guardados");
+  });
+
+  shareButton.addEventListener("click", () => {
+    window.CercaRedShare?.openShareModal({
+      ...savedService,
+      description: data.description,
+      url: savedService.url,
+    });
+  });
+
+  summaryButton.addEventListener("click", () => copySummary(data));
 }
 
 if (service) {

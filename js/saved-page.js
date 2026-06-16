@@ -4,18 +4,10 @@
   const count = document.querySelector("#saved-count");
   const { getSaved, setSaved } = window.CercaRedSaved;
 
-  const toId = (name) =>
-    name
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
-
   function createCard(service) {
     const article = document.createElement("article");
     article.className = "service-card";
+    article.dataset.serviceId = service.id || "";
     article.innerHTML = `
       <div class="service-card-header">
         <span class="service-category">${service.category || "Servicio"}</span>
@@ -27,18 +19,20 @@
         <button class="details-button" type="button">Ver detalle</button>
         <button class="share-button remove-button" type="button">Quitar de guardados</button>
       </div>`;
-//falta unificar el detail.html #1
+
     article.querySelector(".details-button").addEventListener("click", () => {
-      window.location.href = "detail.html?id=" + encodeURIComponent(service.id || toId(service.name));
+      if (!service.id) return;
+      window.location.href = "detail.html?id=" + encodeURIComponent(service.id);
     });
     article.querySelector(".remove-button").addEventListener("click", () =>
-      remove(service.name)
+      remove(service)
     );
     return article;
   }
 
-  function remove(name) {
-    setSaved(getSaved().filter((s) => s.name !== name));
+  function remove(service) {
+    const key = service.id || service.name;
+    setSaved(getSaved().filter((savedService) => (savedService.id || savedService.name) !== key));
     render();
   }
 
