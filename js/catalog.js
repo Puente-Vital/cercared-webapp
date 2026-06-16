@@ -1,15 +1,4 @@
-const services = [
-  {
-    name: "Pensión 65",
-    entity: "MIDIS - Ministerio de Desarrollo e Inclusión Social",
-    category: "Alimentación",
-    description:
-      "Subvención económica bimestral de S/ 350 para adultos mayores de 65 años en situación de pobreza extrema.",
-    keywords: ["adulto mayor", "pensión", "dinero", "subvención", "economía"],
-    district: "Nacional",
-    modality: "Presencial",
-  },
-];
+const services = window.CercaRedServices || [];
 
 const searchForm = document.querySelector("#service-search");
 const searchInput = document.querySelector("#search-input");
@@ -44,9 +33,9 @@ function createServiceCard(service) {
     </div>
     <h3>${service.name}</h3>
     <p class="service-entity">${service.entity}</p>
-    <p class="service-description">${service.description}</p>
+    <p class="service-description">${service.shortDescription}</p>
     <div class="card-actions">
-      <button class="details-button" type="button">Ver requisitos</button>
+      <a class="details-button" href="detail.html?id=${service.id}">Ver requisitos</a>
       <button class="share-button" type="button">Compartir</button>
     </div>
   `;
