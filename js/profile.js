@@ -24,8 +24,17 @@ document.addEventListener('DOMContentLoaded', () => {
     updateAvatarDisplay('userAvatar', currentUser);
   };
 
+  const getSavedServices = () => JSON.parse(localStorage.getItem('cercared_saved') || '[]');
+  const renderSavedStats = () => {
+    document.querySelector('.stats-number').textContent = String(getSavedServices().length);
+  };
+
   renderProfileView();
-  document.querySelector('.stats-number').textContent = '0';
+  renderSavedStats();
+
+  document.getElementById('btnViewSaved').addEventListener('click', () => {
+    window.location.href = 'saved.html';
+  });
 
   document.getElementById('btnLogout').addEventListener('click', () => {
     localStorage.removeItem('cercared_currentUser');

@@ -335,6 +335,11 @@
   background: var(--color-soft);
 }
 
+.sidebar-actions button.is-saved {
+  color: var(--color-surface);
+  background: var(--color-primary);
+}
+
 .detail-empty {
   max-width: 640px;
 }

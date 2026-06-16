@@ -23,6 +23,7 @@ function normalizeText(value) {
 function createServiceCard(service) {
   const article = document.createElement("article");
   article.className = "service-card";
+  article.dataset.serviceId = service.id;
 
   article.innerHTML = `
     <div class="service-card-header">

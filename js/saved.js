@@ -1,17 +1,20 @@
-// probar  logeo en consola
-// localStorage.setItem("cercared_session", JSON.stringify({email:"test@test.com"}))
-// sin sesion: localStorage.removeItem("cercared_session")
 (function () {
-  const SESSION = "cercared_session";
+  const SESSION = "cercared_currentUser";
   const SAVED = "cercared_saved";
 
   const isLoggedIn = () => !!localStorage.getItem(SESSION);
   const getSaved = () => JSON.parse(localStorage.getItem(SAVED) || "[]");
   const setSaved = (list) => localStorage.setItem(SAVED, JSON.stringify(list));
-  const isSaved = (name) => getSaved().some((s) => s.name === name);
+  const keyOf = (service) => service.id || service.name;
+  const isSaved = (service) => {
+    const key = typeof service === "string" ? service : keyOf(service);
+    return getSaved().some((savedService) => keyOf(savedService) === key);
+  };
+
   function toggleSaved(service) {
     const list = getSaved();
-    const i = list.findIndex((s) => s.name === service.name);
+    const serviceKey = keyOf(service);
+    const i = list.findIndex((savedService) => keyOf(savedService) === serviceKey);
     if (i >= 0) list.splice(i, 1);
     else list.push(service);
     setSaved(list);
@@ -20,10 +23,14 @@
 
   const text = (card, sel) => card.querySelector(sel)?.textContent.trim() || "";
   const readService = (card) => ({
+    id: card.dataset.serviceId || "",
     name: text(card, "h3"),
     entity: text(card, ".service-entity"),
     category: text(card, ".service-category"),
     description: text(card, ".service-description"),
+    url: card.dataset.serviceId
+      ? `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, "")}detail.html?id=${encodeURIComponent(card.dataset.serviceId)}`
+      : window.location.href,
   });
 
   function setState(button, saved) {
@@ -33,7 +40,7 @@
   function refresh() {
     document.querySelectorAll(".service-card").forEach((card) => {
       const button = card.querySelector(".save-button");
-      if (button) setState(button, isSaved(text(card, "h3")));
+      if (button) setState(button, isSaved(readService(card)));
     });
   }
 
@@ -67,5 +74,5 @@
     if (grid) new MutationObserver(refresh).observe(grid, { childList: true });
   });
 
-  window.CercaRedSaved = { getSaved, setSaved, isSaved, isLoggedIn };
+  window.CercaRedSaved = { getSaved, setSaved, isSaved, isLoggedIn, toggleSaved };
 })();
