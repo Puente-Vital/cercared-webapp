@@ -14,9 +14,6 @@ body {
   min-height: 100vh;
 }
 
-/* ==========================================================================
-   CABECERA Y NAVBAR (FUSIONADO DESDE NAVBAR.CSS)
-   ========================================================================== */
 .auth-header {
   width: 100%;
   position: sticky;
@@ -31,10 +28,10 @@ body {
   width: calc(100% - 160px);
   min-height: 88px;
   margin: 0 auto;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;                 
+  justify-content: flex-start;   
   align-items: center;
-  gap: 32px;
+  position: relative;            
 }
 
 .brand {
@@ -57,10 +54,8 @@ body {
 .nav-menu {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 64px;
-  grid-column: 2;
-  margin-left: -15px; 
+  margin-left: 548.5px; 
 }
 
 .nav-menu a {
@@ -97,9 +92,6 @@ body {
   margin: auto;
 }
 
-/* ==========================================================================
-   ESTRUCTURA DE AUTENTICACIÓN
-   ========================================================================== */
 .auth-wrapper {
   display: flex;
   flex: 1; 
