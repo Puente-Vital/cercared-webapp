@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Tus servicios guardados en CercaRed." />
+    <title>Guardados | CercaRed</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/navbar.css" />
+    <link rel="stylesheet" href="css/catalog.css" />
+    <link rel="stylesheet" href="css/footer.css" />
+    <link rel="stylesheet" href="css/saved.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="navbar" aria-label="Navegación principal">
+        <a class="brand" href="index.html" aria-label="CercaRed inicio">
+          <img class="brand-logo" src="assets/images/logo.png" alt="CercaRed" />
+        </a>
+
+        <button
+          class="nav-toggle"
+          type="button"
+          aria-label="Abrir menú"
+          aria-expanded="false"
+          aria-controls="nav-menu"
+        >
+          <img class="nav-toggle-icon" src="assets/icons/menu.svg" alt="" aria-hidden="true" />
+        </button>
+
+        <div class="nav-menu" id="nav-menu">
+          <a href="index.html">Catálogo</a>
+          <a class="is-active" href="saved.html" aria-current="page">Guardados</a>
+          <a href="auth.html">Acceso</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="catalog-main">
+      <section class="catalog-heading">
+        <h1>Servicios guardados</h1>
+        <p>Aquí encuentras los servicios que marcaste para revisar luego.</p>
+      </section>
+
+      <section class="results-section" aria-labelledby="saved-title">
+        <h2 class="visually-hidden" id="saved-title">Lista de servicios guardados</h2>
+        <p class="results-count" id="saved-count" aria-live="polite"></p>
+        <div class="services-grid" id="saved-grid"></div>
+
+        <div class="empty-state" id="saved-empty" hidden>
+          <img src="assets/icons/save.svg" alt="" aria-hidden="true" />
+          <h2>Aún no tienes servicios guardados</h2>
+          <p>Explora el catálogo y guarda los servicios que te interesen.</p>
+          <a href="index.html"><button type="button">Ir al catálogo</button></a>
+        </div>
+      </section>
+    </main>
+
+    <main-footer></main-footer>
+
+    <script src="js/navbar.js"></script>
+    <script src="js/footer.js"></script>
+    <script src="js/saved.js"></script>
+    <script src="js/saved-page.js"></script>
+  </body>
+</html>
