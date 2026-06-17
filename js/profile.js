@@ -127,12 +127,19 @@ btnCancelEdit.addEventListener('click', () => {
   });
 
   const toggleGroups = document.querySelectorAll('.toggle-group');
+  const setButtonPressed = (buttons, activeButton) => {
+    buttons.forEach(button => {
+      const isActive = button === activeButton;
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-pressed', String(isActive));
+    });
+  };
+
   toggleGroups.forEach(group => {
     const buttons = group.querySelectorAll('.btn-toggle');
     buttons.forEach(btn => {
       btn.addEventListener('click', () => {
-        buttons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+        setButtonPressed(buttons, btn);
       });
     });
   });
@@ -153,13 +160,8 @@ btnCancelEdit.addEventListener('click', () => {
   const setToggleActive = (groupId, savedValue) => {
     const group = document.getElementById(groupId);
     const buttons = group.querySelectorAll('.btn-toggle');
-    buttons.forEach(btn => {
-      if (btn.dataset.value === savedValue) {
-        btn.classList.add('active');
-      } else {
-        btn.classList.remove('active');
-      }
-    });
+    const activeButton = Array.from(buttons).find(btn => btn.dataset.value === savedValue) || buttons[0];
+    setButtonPressed(buttons, activeButton);
   };
 
   setToggleActive('fontSizeToggle', userPrefs.fontSize);

@@ -85,7 +85,11 @@ body {
 }
 
 .search-button,
-.empty-state button {
+.empty-state button,
+.empty-state-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 144px;
   min-height: 64px;
   padding: 12px 20px;
@@ -101,7 +105,9 @@ body {
 .search-button:hover,
 .search-button:focus-visible,
 .empty-state button:hover,
-.empty-state button:focus-visible {
+.empty-state button:focus-visible,
+.empty-state-action:hover,
+.empty-state-action:focus-visible {
   background: var(--color-primary-hover);
 }
 
@@ -320,7 +326,8 @@ body {
   color: var(--color-muted);
 }
 
-.empty-state button {
+.empty-state button,
+.empty-state-action {
   min-height: 48px;
   border-radius: 8px;
 }

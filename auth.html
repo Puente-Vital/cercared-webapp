@@ -88,13 +88,13 @@
           <form id="loginForm" novalidate>
             <div class="input-group">
               <label for="loginEmail">Correo electrónico</label>
-              <input type="email" id="loginEmail" placeholder="correo@email.com" />
-              <span class="error-message" id="loginEmailError"></span>
+              <input type="email" id="loginEmail" placeholder="correo@email.com" aria-describedby="loginEmailError" />
+              <span class="error-message" id="loginEmailError" aria-live="polite"></span>
             </div>
             <div class="input-group">
               <label for="loginPassword">Contraseña</label>
-              <input type="password" id="loginPassword" placeholder="••••••••" />
-              <span class="error-message" id="loginPasswordError"></span>
+              <input type="password" id="loginPassword" placeholder="••••••••" aria-describedby="loginPasswordError" />
+              <span class="error-message" id="loginPasswordError" aria-live="polite"></span>
             </div>
             <div class="form-link-wrapper">
               <a href="#" id="forgotPassword" class="forgot-password">¿Olvidaste tu contraseña?</a>
@@ -127,35 +127,35 @@
           <form id="registerForm" novalidate>
             <div class="input-group">
               <label for="registerName">Nombre completo</label>
-              <input type="text" id="registerName" placeholder="Escribe tu nombre" />
-              <span class="error-message" id="registerNameError"></span>
+              <input type="text" id="registerName" placeholder="Escribe tu nombre" aria-describedby="registerNameError" />
+              <span class="error-message" id="registerNameError" aria-live="polite"></span>
             </div>
             <div class="input-group">
               <label for="registerEmail">Correo electrónico</label>
-              <input type="email" id="registerEmail" placeholder="Escribe tu correo" />
-              <span class="error-message" id="registerEmailError"></span>
+              <input type="email" id="registerEmail" placeholder="Escribe tu correo" aria-describedby="registerEmailError" />
+              <span class="error-message" id="registerEmailError" aria-live="polite"></span>
             </div>
             <div class="input-row">
               <div class="input-group">
                 <label for="registerPassword">Contraseña</label>
-                <input type="password" id="registerPassword" placeholder="Crea una contraseña segura" />
-                <span class="error-message" id="registerPasswordError"></span>
+                <input type="password" id="registerPassword" placeholder="Crea una contraseña segura" aria-describedby="registerPasswordError" />
+                <span class="error-message" id="registerPasswordError" aria-live="polite"></span>
               </div>
               <div class="input-group">
                 <label for="registerConfirmPassword">Confirmar contraseña</label>
-                <input type="password" id="registerConfirmPassword" placeholder="Repite tu contraseña" />
-                <span class="error-message" id="registerConfirmPasswordError"></span>
+                <input type="password" id="registerConfirmPassword" placeholder="Repite tu contraseña" aria-describedby="registerConfirmPasswordError" />
+                <span class="error-message" id="registerConfirmPasswordError" aria-live="polite"></span>
               </div>
             </div>
             <div class="terms-group">
               <label class="checkbox-container">
-                <input type="checkbox" id="registerTerms" />
+                <input type="checkbox" id="registerTerms" aria-describedby="registerTermsError" />
                 <span class="custom-checkbox"></span>
                 <span class="terms-text">
                   Acepto los <a href="#">términos y condiciones</a> y la <a href="#">política de privacidad</a> de CercaRed.
                 </span>
               </label>
-              <span class="error-message" id="registerTermsError"></span>
+              <span class="error-message" id="registerTermsError" aria-live="polite"></span>
             </div>
             <button type="submit" class="btn-secondary">Registrarse</button>
             <button type="button" class="btn-cancel" id="cancelRegister">Cancelar</button>

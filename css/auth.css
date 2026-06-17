@@ -215,20 +215,29 @@ input.input-error {
 
 .btn-primary, .btn-secondary {
   width: 100%;
+  min-height: var(--target-min);
   padding: 14px;
   border: none;
   border-radius: 6px;
   font-size: 20px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.btn-primary {
+  background-color: #1E4E8C;
   color: #FFFFFF;
 }
 
-.btn-primary { background-color: #1E4E8C; }
-.btn-secondary { background-color: #F97316; margin-bottom: 12px; }
+.btn-secondary {
+  background-color: #F97316;
+  color: var(--color-on-accent);
+  margin-bottom: 12px;
+}
 
 .btn-cancel {
   width: 100%;
+  min-height: var(--target-min);
   padding: 14px;
   border: 1px solid #E2E8F0;
   background-color: transparent;
@@ -322,6 +331,7 @@ input.input-error {
 }
 
 .btn-social {
+  min-height: var(--target-min);
   padding: 12px;
   border: 1px solid #E2E8F0;
   background-color: transparent;

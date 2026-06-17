@@ -29,7 +29,7 @@
       <div class="nav-menu" id="nav-menu">
         <a href="index.html">Catálogo</a>
         <a href="saved.html">Guardados</a>
-        <a class="is-active" href="profile.html">Mi perfil</a> 
+        <a class="is-active" href="profile.html" aria-current="page">Mi perfil</a>
       </div>
     </nav>
   </header>
@@ -98,15 +98,15 @@
               <div class="form-group">
                 <label>Tamaño de letra</label>
                 <div class="toggle-group" id="fontSizeToggle">
-                  <button type="button" class="btn-toggle active" data-value="normal">Normal (16px)</button>
-                  <button type="button" class="btn-toggle" data-value="large">Grande (20px)</button>
+                  <button type="button" class="btn-toggle active" data-value="normal" aria-pressed="true">Normal (16px)</button>
+                  <button type="button" class="btn-toggle" data-value="large" aria-pressed="false">Grande (20px)</button>
                 </div>
               </div>
               <div class="form-group">
                 <label>Modo de vista</label>
                 <div class="toggle-group" id="viewModeToggle">
-                  <button type="button" class="btn-toggle active" data-value="normal">Normal</button>
-                  <button type="button" class="btn-toggle" data-value="simple">Simple</button>
+                  <button type="button" class="btn-toggle active" data-value="normal" aria-pressed="true">Normal</button>
+                  <button type="button" class="btn-toggle" data-value="simple" aria-pressed="false">Simple</button>
                 </div>
               </div>
             </div>
@@ -121,18 +121,18 @@
           <form id="passwordForm" class="settings-form">
             <div class="form-group">
               <label for="currentPassword">Contraseña actual</label>
-              <input type="password" id="currentPassword" placeholder="••••••••">
-              <span class="error-message" id="currentPasswordError"></span>
+              <input type="password" id="currentPassword" placeholder="••••••••" aria-describedby="currentPasswordError">
+              <span class="error-message" id="currentPasswordError" aria-live="polite"></span>
             </div>
             <div class="form-group">
               <label for="newPassword">Nueva contraseña</label>
-              <input type="password" id="newPassword" placeholder="••••••••">
-              <span class="error-message" id="newPasswordError"></span>
+              <input type="password" id="newPassword" placeholder="••••••••" aria-describedby="newPasswordError">
+              <span class="error-message" id="newPasswordError" aria-live="polite"></span>
             </div>
             <div class="form-group">
               <label for="confirmPassword">Confirmar nueva contraseña</label>
-              <input type="password" id="confirmPassword" placeholder="••••••••">
-              <span class="error-message" id="confirmPasswordError"></span>
+              <input type="password" id="confirmPassword" placeholder="••••••••" aria-describedby="confirmPasswordError">
+              <span class="error-message" id="confirmPasswordError" aria-live="polite"></span>
             </div>
 
             <button type="submit" class="btn-accent btn-submit full-width">Actualizar contraseña</button>
