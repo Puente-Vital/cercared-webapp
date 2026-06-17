@@ -32,6 +32,9 @@
 }
 
 .footer-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target-min);
   color: #9CA3AF;
   text-decoration: none;
   font-size: 18px;

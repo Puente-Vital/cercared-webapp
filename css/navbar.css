@@ -42,6 +42,9 @@
 }
 
 .nav-menu a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target-min);
   color: var(--color-muted);
   font-size: 18px;
   font-weight: 500;

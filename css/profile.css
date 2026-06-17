@@ -81,6 +81,7 @@
 
 .btn-outline, .btn-accent, .btn-primary {
   width: 100%;
+  min-height: var(--target-min);
   padding: 12px;
   border-radius: 6px;
   font-size: 16px;
@@ -103,7 +104,7 @@
 .btn-accent {
   background: var(--color-accent);
   border: none;
-  color: white;
+  color: var(--color-on-accent);
 }
 
 .btn-accent:hover {
@@ -175,6 +176,7 @@
 
 .btn-toggle {
   flex: 1;
+  min-height: var(--target-min);
   padding: 12px;
   background: transparent;
   border: none;
