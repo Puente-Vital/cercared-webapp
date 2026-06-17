@@ -263,7 +263,194 @@ function wireDetailActions(data) {
     });
   });
 
-  summaryButton.addEventListener("click", () => copySummary(data));
+  summaryButton.addEventListener("click", () => openSummaryModal(data));
+}
+function buildSummaryModal(data) {
+  const requirementItems = data.requirements
+    .map((r) => `<div class="summary-modal-item">${r.title}</div>`)
+    .join("");
+ 
+  const documentItems = data.documents
+    .map((d) => `<div class="summary-modal-item">${d.title}</div>`)
+    .join("");
+ 
+  const stepItems = data.steps
+    .map(
+      (s, i) => `
+      <li class="summary-modal-step">
+        <span class="summary-modal-step-num">${i + 1}</span>
+        <span>${s.title}</span>
+      </li>`
+    )
+    .join("");
+ 
+  const channelItems = data.channels
+    .map((c) => `<li class="summary-modal-channel">${c.title}. ${c.description}</li>`)
+    .join("");
+ 
+  return `
+    <div
+      class="summary-modal-overlay"
+      id="summary-modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="summary-modal-title"
+    >
+      <div class="summary-modal">
+        <button
+          class="summary-modal-close"
+          type="button"
+          aria-label="Cerrar resumen"
+          id="summary-modal-close"
+        >×</button>
+ 
+        <p class="summary-modal-category">${data.category}</p>
+        <h2 class="summary-modal-title" id="summary-modal-title">${data.name}</h2>
+ 
+        <h3 class="summary-modal-section-title">Resumen del servicio</h3>
+        <div class="summary-modal-text">${data.description}</div>
+ 
+        <div class="summary-modal-grid">
+          <div>
+            <h3 class="summary-modal-section-title">Requisitos principales</h3>
+            <div class="summary-modal-items">${requirementItems}</div>
+          </div>
+          <div>
+            <h3 class="summary-modal-section-title">Documentos basicos</h3>
+            <div class="summary-modal-items">${documentItems}</div>
+          </div>
+        </div>
+ 
+        <div class="summary-modal-grid">
+          <div>
+            <h3 class="summary-modal-section-title">Pasos</h3>
+            <ol class="summary-modal-steps">${stepItems}</ol>
+          </div>
+          <div>
+            <h3 class="summary-modal-section-title">Canales de atencion</h3>
+            <ul class="summary-modal-channels">${channelItems}</ul>
+          </div>
+        </div>
+ 
+        <div class="summary-modal-actions">
+          <button class="summary-modal-copy" type="button" id="summary-modal-copy-btn">
+            Copiar resumen
+          </button>
+          <button class="summary-modal-pdf" type="button" id="summary-modal-pdf-btn">
+            Descargar PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+ 
+/* ── Abrir modal ── */
+function openSummaryModal(data) {
+  // Evitar duplicados
+  document.querySelector("#summary-modal-overlay")?.remove();
+ 
+  document.body.insertAdjacentHTML("beforeend", buildSummaryModal(data));
+ 
+  const overlay = document.querySelector("#summary-modal-overlay");
+  const closeBtn = document.querySelector("#summary-modal-close");
+  const copyBtn = document.querySelector("#summary-modal-copy-btn");
+  const pdfBtn = document.querySelector("#summary-modal-pdf-btn");
+ 
+  // Abrir con animación
+  requestAnimationFrame(() => overlay.classList.add("is-open"));
+ 
+  // Guardar foco anterior y mover foco al modal
+  const previousFocus = document.activeElement;
+  closeBtn.focus();
+ 
+  // Cerrar al hacer clic en overlay (fuera del modal)
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeSummaryModal(overlay, previousFocus);
+  });
+ 
+  // Cerrar con botón X
+  closeBtn.addEventListener("click", () => closeSummaryModal(overlay, previousFocus));
+ 
+  // Cerrar con Escape
+  function handleKeydown(e) {
+    if (e.key === "Escape") {
+      closeSummaryModal(overlay, previousFocus);
+      document.removeEventListener("keydown", handleKeydown);
+    }
+  }
+  document.addEventListener("keydown", handleKeydown);
+ 
+  // Copiar resumen
+  copyBtn.addEventListener("click", async () => {
+    await copySummary(data);
+  });
+ 
+  // Descargar PDF
+  pdfBtn.addEventListener("click", () => downloadSummaryPDF(data));
+}
+ 
+/* ── Cerrar modal ── */
+function closeSummaryModal(overlay, previousFocus) {
+  overlay.classList.remove("is-open");
+  overlay.addEventListener(
+    "transitionend",
+    () => {
+      overlay.remove();
+      previousFocus?.focus();
+    },
+    { once: true }
+  );
+}
+ 
+/* ── Descargar PDF ── */
+function downloadSummaryPDF(data) {
+  const requirements = data.requirements.map((r) => `  • ${r.title}`).join("\n");
+  const documents = data.documents.map((d) => `  • ${d.title}`).join("\n");
+  const steps = data.steps.map((s, i) => `  ${i + 1}. ${s.title}`).join("\n");
+  const channels = data.channels.map((c) => `  • ${c.title}: ${c.description}`).join("\n");
+ 
+  const content = [
+    `RESUMEN DEL SERVICIO - CERCARED`,
+    `================================`,
+    ``,
+    `${data.name.toUpperCase()}`,
+    `Categoría: ${data.category}  |  Entidad: ${data.shortEntity}  |  Costo: ${data.cost}`,
+    ``,
+    `DESCRIPCIÓN`,
+    `-----------`,
+    data.description,
+    ``,
+    `REQUISITOS PRINCIPALES`,
+    `----------------------`,
+    requirements,
+    ``,
+    `DOCUMENTOS BÁSICOS`,
+    `------------------`,
+    documents,
+    ``,
+    `PASOS`,
+    `-----`,
+    steps,
+    ``,
+    `CANALES DE ATENCIÓN`,
+    `-------------------`,
+    channels,
+    ``,
+    `Canal oficial: ${data.officialUrl}`,
+    ``,
+    `Generado desde CercaRed · Servicios sociales cerca de ti`,
+  ].join("\n");
+ 
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `resumen-${data.id}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+ 
+  showDetailToast("Resumen descargado");
 }
 
 if (service) {

@@ -1,6 +1,16 @@
+const userThemePrefs = JSON.parse(localStorage.getItem('cercared_currentUser'));
+if (userThemePrefs && userThemePrefs.preferences && userThemePrefs.preferences.fontSize === 'large') {
+  document.body.classList.add('font-large');
+}
+
 const navToggle = document.querySelector(".nav-toggle");
 const navMenu = document.querySelector(".nav-menu");
 const navLinks = document.querySelectorAll(".nav-menu a");
+const brandLink = document.querySelector(".brand");
+
+if (brandLink) {
+  brandLink.href = "https://cercared.netlify.app/";
+}
 
 function closeMenu() {
   if (!navMenu || !navToggle) return;
