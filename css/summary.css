@@ -1,0 +1,87 @@
+.summary-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+  background: rgba(15, 23, 42, 0.55);
+}
+.summary-overlay[hidden] { display: none; }
+
+.summary-modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: var(--space-4);
+  border-radius: 16px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+.summary-header h2 {
+  margin: 0;
+  font-size: 22px;
+  color: var(--color-text);
+}
+.summary-close {
+  width: 40px; height: 40px;
+  border: 0; border-radius: 50%;
+  background: transparent; color: var(--color-muted);
+  font-size: 18px; cursor: pointer;
+}
+.summary-close:hover, .summary-close:focus-visible {
+  background: var(--color-background); outline: none;
+}
+
+.summary-name {
+  margin: 0 0 var(--space-3);
+  font-size: 20px; color: var(--color-primary);
+}
+.summary-body h4 {
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: 16px; color: var(--color-text);
+}
+.summary-body ul, .summary-body ol {
+  margin: 0; padding-left: 22px;
+  color: var(--color-text); line-height: 1.6;
+}
+.summary-body a { color: var(--color-primary); word-break: break-all; }
+
+.summary-warning {
+  margin: 0 0 var(--space-2);
+  padding: 10px 14px; border-radius: 10px;
+  color: #92400e; background: #fef3c7;
+  font-size: 14px;
+}
+
+.summary-actions {
+  display: flex; gap: var(--space-2);
+  margin-top: var(--space-4); flex-wrap: wrap;
+}
+.summary-actions button {
+  flex: 1; min-width: 140px; min-height: 48px;
+  border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer;
+}
+.summary-copy {
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary); background: var(--color-surface);
+}
+.summary-copy:hover { background: var(--color-soft); }
+.summary-share {
+  border: 0; color: var(--color-surface); background: var(--color-primary);
+}
+.summary-share:hover { background: var(--color-primary-hover); }
+
+#summary-toast {
+  top: 24px;
+  bottom: auto;
+}

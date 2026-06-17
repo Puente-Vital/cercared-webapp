@@ -263,7 +263,7 @@ function wireDetailActions(data) {
     });
   });
 
-  summaryButton.addEventListener("click", () => copySummary(data));
+  summaryButton.addEventListener("click", () => window.CercaRedSummary.open(data));
 }
 
 if (service) {
