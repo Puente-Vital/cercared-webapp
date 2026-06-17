@@ -131,4 +131,4 @@ Con solo agregar el objeto, el servicio aparece automáticamente en el catálogo
 
 -----
 
-**Curso:** 1ASI0400 — IHC y Programación Web · **Universidad Peruana de Ciencias Aplicadas (UPC)** · Período 2026-01
+**Curso:** 1ACC0237 — IHC y Programación Web · **Universidad Peruana de Ciencias Aplicadas (UPC)** · Período 2026-01
