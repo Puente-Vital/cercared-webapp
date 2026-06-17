@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CercaRed | Autenticación</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/navbar.css" />
+  <link rel="stylesheet" href="css/auth.css" />
+  <link rel="stylesheet" href="css/footer.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <nav class="navbar" aria-label="Navegación principal">
+      <a class="brand" href="index.html" aria-label="CercaRed inicio">
+        <img class="brand-logo" src="assets/images/logo.png" alt="CercaRed" />
+      </a>
+
+      <button class="nav-toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="nav-menu">
+        <img class="nav-toggle-icon" src="assets/icons/menu.svg" alt="" aria-hidden="true" />
+      </button>
+
+      <div class="nav-menu" id="nav-menu">
+        <a href="index.html">Catálogo</a>
+        <a href="saved.html">Guardados</a>
+        <a href="auth.html" class="is-active" aria-current="page">Acceso</a>
+      </div>
+    </nav>
+  </header>
+
+  <div class="auth-wrapper" id="authWrapper">
+    
+    <div class="auth-sidebar" id="authSidebar">
+  
+      <div class="sidebar-content" id="loginSidebar">
+        <span class="sidebar-tag">PLATAFORMA OFICIAL DE ORIENTACIÓN SOCIAL</span>
+        <h1 class="sidebar-title login-title">Bienvenido a <span>CercaRed</span></h1>
+        
+        <p class="sidebar-subtitle desktop-text">
+          Accede para guardar servicios, personalizar tu experiencia y ayudar a tus familiares a encontrar los apoyos que necesitan.
+        </p>
+
+        <p class="sidebar-subtitle mobile-text">
+          Inicia sesión para acceder a tu perfil y recursos personalizados.
+        </p>
+
+        <ul class="sidebar-features">
+        </ul>
+      </div>
+
+      <div class="sidebar-content hidden" id="registerSidebar">
+        <h1 class="sidebar-title register-title">Únete a <span>CercaRed</span></h1>
+        <p class="sidebar-subtitle">
+          Accede para guardar servicios, personalizar tu experiencia y ayudar a tus familiares a encontrar los apoyos que necesitan.
+        </p>
+        <ul class="sidebar-features">
+          <li>
+            <img src="assets/images/check2.png" alt="Check" class="feature-icon" />
+            <span>Guarda servicios para consultarlos después</span>
+          </li>
+          <li>
+            <img src="assets/images/check2.png" alt="Check" class="feature-icon" />
+            <span>Personaliza tu distrito y categorías favoritas</span>
+          </li>
+          <li>
+            <img src="assets/images/check2.png" alt="Check" class="feature-icon" />
+            <span>Comparte información con tu familia fácilmente</span>
+          </li>
+          <li>
+            <img src="assets/images/check2.png" alt="Check" class="feature-icon" />
+            <span>Activa el modo simple de forma permanente</span>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="auth-main">
+      <div class="form-container">
+        
+        <div class="auth-view" id="loginView">
+          <h2>Iniciar sesión</h2>
+          <p class="view-desc">Accede a tu cuenta de CercaRed</p>
+          <form id="loginForm" novalidate>
+            <div class="input-group">
+              <label for="loginEmail">Correo electrónico</label>
+              <input type="email" id="loginEmail" placeholder="correo@email.com" aria-describedby="loginEmailError" />
+              <span class="error-message" id="loginEmailError" aria-live="polite"></span>
+            </div>
+            <div class="input-group">
+              <label for="loginPassword">Contraseña</label>
+              <input type="password" id="loginPassword" placeholder="••••••••" aria-describedby="loginPasswordError" />
+              <span class="error-message" id="loginPasswordError" aria-live="polite"></span>
+            </div>
+            <div class="form-link-wrapper">
+              <a href="#" id="forgotPassword" class="forgot-password">¿Olvidaste tu contraseña?</a>
+            </div>
+            <button type="submit" class="btn-primary">Iniciar sesión</button>
+          </form>
+          <div class="divider"><span>o inicia sesión con</span></div>
+          
+          <div class="social-buttons">
+            <button type="button" class="btn-social">
+              <img src="assets/images/logoGG.png" alt="Google" class="social-icon">
+            </button>
+            <button type="button" class="btn-social">
+              <img src="assets/images/logoFB.png" alt="Facebook" class="social-icon">
+            </button>
+            <button type="button" class="btn-social">
+              <img src="assets/images/LogoAPPLE.png" alt="Apple" class="social-icon">
+            </button>
+          </div>
+
+          <p class="switch-text">¿No tienes cuenta? <a href="#" id="toRegister">Regístrate aquí</a></p>
+          <div class="guest-wrapper">
+            <a href="index.html" class="guest-link">Continuar sin cuenta</a>
+          </div>
+        </div>
+
+        <div class="auth-view hidden" id="registerView">
+          <h2>Crear cuenta</h2>
+          <p class="view-desc">Regístrate para acceder a todos los servicios y guardar tus favoritos</p>
+          <form id="registerForm" novalidate>
+            <div class="input-group">
+              <label for="registerName">Nombre completo</label>
+              <input type="text" id="registerName" placeholder="Escribe tu nombre" aria-describedby="registerNameError" />
+              <span class="error-message" id="registerNameError" aria-live="polite"></span>
+            </div>
+            <div class="input-group">
+              <label for="registerEmail">Correo electrónico</label>
+              <input type="email" id="registerEmail" placeholder="Escribe tu correo" aria-describedby="registerEmailError" />
+              <span class="error-message" id="registerEmailError" aria-live="polite"></span>
+            </div>
+            <div class="input-row">
+              <div class="input-group">
+                <label for="registerPassword">Contraseña</label>
+                <input type="password" id="registerPassword" placeholder="Crea una contraseña segura" aria-describedby="registerPasswordError" />
+                <span class="error-message" id="registerPasswordError" aria-live="polite"></span>
+              </div>
+              <div class="input-group">
+                <label for="registerConfirmPassword">Confirmar contraseña</label>
+                <input type="password" id="registerConfirmPassword" placeholder="Repite tu contraseña" aria-describedby="registerConfirmPasswordError" />
+                <span class="error-message" id="registerConfirmPasswordError" aria-live="polite"></span>
+              </div>
+            </div>
+            <div class="terms-group">
+              <label class="checkbox-container">
+                <input type="checkbox" id="registerTerms" aria-describedby="registerTermsError" />
+                <span class="custom-checkbox"></span>
+                <span class="terms-text">
+                  Acepto los <a href="#">términos y condiciones</a> y la <a href="#">política de privacidad</a> de CercaRed.
+                </span>
+              </label>
+              <span class="error-message" id="registerTermsError" aria-live="polite"></span>
+            </div>
+            <button type="submit" class="btn-secondary">Registrarse</button>
+            <button type="button" class="btn-cancel" id="cancelRegister">Cancelar</button>
+          </form>
+          <div class="divider"><span>o regístrate con</span></div>
+          
+          <div class="social-buttons">
+            <button type="button" class="btn-social">
+              <img src="assets/images/logoGG.png" alt="Google" class="social-icon">
+            </button>
+            <button type="button" class="btn-social">
+              <img src="assets/images/logoFB.png" alt="Facebook" class="social-icon">
+            </button>
+            <button type="button" class="btn-social">
+              <img src="assets/images/LogoAPPLE.png" alt="Apple" class="social-icon">
+            </button>
+          </div>
+
+          <p class="switch-text">¿Ya tienes cuenta? <a href="#" id="toLogin">Iniciar sesión</a></p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <footer class="auth-footer-mobile">
+    <div class="footer-brand">
+      <img src="assets/images/logofooter.png" alt="CercaRed" class="footer-logo" />
+    </div>
+    <div class="footer-links">
+      <a href="#">Fuentes</a>
+      <a href="#">Términos</a>
+      <a href="#">Privacidad</a>
+      <a href="#">Contacto</a>
+    </div>
+  </footer>
+
+  <script src="js/auth.js"></script>
+  <script src="js/navbar.js"></script>
+  <script src="js/footer.js"></script>
+</body>
+</html>

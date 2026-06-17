@@ -1,0 +1,159 @@
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid rgba(209, 213, 219, 0.8);
+  backdrop-filter: blur(12px);
+}
+
+.navbar {
+  width: calc(100% - 160px);
+  min-height: 88px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 32px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.brand-logo {
+  width: 142px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.nav-menu {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 64px;
+  grid-column: 2;
+}
+
+.nav-menu a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target-min);
+  color: var(--color-muted);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.4;
+  transition: color 160ms ease;
+}
+
+.nav-menu a:hover,
+.nav-menu a:focus-visible,
+.nav-menu a.is-active {
+  color: var(--color-primary);
+}
+
+.nav-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 30px;
+  border-radius: 8px;
+  color: var(--color-surface);
+  background: var(--color-primary);
+  font-size: 16px;
+  font-weight: 600;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.nav-cta:hover,
+.nav-cta:focus-visible {
+  background: var(--color-primary-hover);
+}
+
+.nav-toggle {
+  display: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.nav-toggle-icon {
+  display: block;
+  width: 24px;
+  height: 24px;
+  margin: auto;
+}
+
+@media (max-width: 900px) {
+  :root {
+    --header-height: 64px;
+  }
+
+  .navbar {
+    width: min(100% - 32px, var(--container));
+    min-height: var(--header-height);
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .brand {
+    font-size: 21px;
+  }
+
+  .nav-toggle {
+    display: inline-block;
+    order: 3;
+  }
+
+  .nav-menu {
+    position: absolute;
+    top: var(--header-height);
+    left: 16px;
+    right: 16px;
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .nav-menu.is-open {
+    display: flex;
+  }
+
+  .nav-menu a {
+    padding: 14px 12px;
+    border-radius: 8px;
+  }
+
+  .nav-menu a:hover,
+  .nav-menu a:focus-visible {
+    background: var(--color-soft);
+  }
+
+  .nav-cta {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .navbar {
+    width: min(100% - 24px, var(--container));
+  }
+}
