@@ -12,6 +12,11 @@ const resultsCount = document.querySelector("#results-count");
 const emptyState = document.querySelector("#empty-state");
 const pagination = document.querySelector("#pagination");
 
+const QUERY_PARAM = "q";
+const CATEGORY_PARAM = "category";
+const DISTRICT_PARAM = "district";
+const MODALITY_PARAM = "modality";
+
 function normalizeText(value) {
   return value
     .normalize("NFD")
@@ -44,6 +49,35 @@ function createServiceCard(service) {
   return article;
 }
 
+function setSelectValue(select, value) {
+  if (!value) return;
+  const hasOption = Array.from(select.options).some((option) => option.value === value);
+  if (hasOption) select.value = value;
+}
+
+function readFiltersFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+
+  searchInput.value = params.get(QUERY_PARAM) || params.get("query") || "";
+  setSelectValue(categoryFilter, params.get(CATEGORY_PARAM));
+  setSelectValue(districtFilter, params.get(DISTRICT_PARAM));
+  setSelectValue(modalityFilter, params.get(MODALITY_PARAM));
+}
+
+function updateUrlFromFilters() {
+  const params = new URLSearchParams();
+  const query = searchInput.value.trim();
+
+  if (query) params.set(QUERY_PARAM, query);
+  if (categoryFilter.value) params.set(CATEGORY_PARAM, categoryFilter.value);
+  if (districtFilter.value) params.set(DISTRICT_PARAM, districtFilter.value);
+  if (modalityFilter.value) params.set(MODALITY_PARAM, modalityFilter.value);
+
+  const queryString = params.toString();
+  const nextUrl = `${window.location.pathname}${queryString ? `?${queryString}` : ""}${window.location.hash}`;
+  window.history.replaceState(null, "", nextUrl);
+}
+
 function renderServices(filteredServices) {
   servicesGrid.replaceChildren(
     ...filteredServices.map((service) => createServiceCard(service)),
@@ -64,7 +98,9 @@ function renderServices(filteredServices) {
   resultsCount.textContent = `Mostrando ${filteredServices.length} ${serviceLabel}`;
 }
 
-function applyFilters() {
+function applyFilters({ syncUrl = true } = {}) {
+  if (syncUrl) updateUrlFromFilters();
+
   const normalizedQuery = normalizeText(searchInput.value);
   const filteredServices = services.filter((service) => {
     const searchableContent = [
@@ -99,7 +135,7 @@ function clearFilters() {
   categoryFilter.value = "";
   districtFilter.value = "";
   modalityFilter.value = "";
-  renderServices(services);
+  applyFilters();
   searchInput.focus();
 }
 
@@ -115,4 +151,5 @@ searchForm.addEventListener("submit", (event) => {
 clearFiltersButton.addEventListener("click", clearFilters);
 emptyClearButton.addEventListener("click", clearFilters);
 
-renderServices(services);
+readFiltersFromUrl();
+applyFilters({ syncUrl: false });
