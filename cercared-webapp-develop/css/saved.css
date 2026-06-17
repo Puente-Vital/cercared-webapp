@@ -1,0 +1,45 @@
+.save-button.is-saved {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+
+.save-button.is-saved img {
+  filter: brightness(0) invert(1);
+}
+
+.save-button {
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.saved-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 32px;
+  z-index: 1100;
+  max-width: calc(100% - 48px);
+  padding: 14px 22px;
+  border-radius: 12px;
+  color: var(--color-surface);
+  background: var(--color-text);
+  box-shadow: var(--shadow-soft);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  text-align: center;
+  opacity: 0;
+  transform: translate(-50%, 16px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.saved-toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.remove-button:hover,
+.remove-button:focus-visible {
+  border-color: var(--color-error);
+  color: var(--color-error);
+  background: #fdecec;
+}

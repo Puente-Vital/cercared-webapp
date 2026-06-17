@@ -1,0 +1,151 @@
+  <!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Encuentra servicios sociales y recursos institucionales en CercaRed."
+    />
+    <title>Catálogo de servicios | CercaRed</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/navbar.css" />
+    <link rel="stylesheet" href="css/catalog.css" />
+    <link rel="stylesheet" href="css/footer.css" />
+    <link rel="stylesheet" href="css/saved.css" />
+    <link rel="stylesheet" href="css/share.css" />
+    <script src="js/services.js" defer></script>
+    <script src="js/catalog.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="navbar" aria-label="Navegación principal">
+        <a class="brand" href="index.html" aria-label="CercaRed inicio">
+          <img class="brand-logo" src="assets/images/logo.png" alt="CercaRed" />
+        </a>
+
+        <button
+          class="nav-toggle"
+          type="button"
+          aria-label="Abrir menú"
+          aria-expanded="false"
+          aria-controls="nav-menu"
+        >
+          <img
+            class="nav-toggle-icon"
+            src="assets/icons/menu.svg"
+            alt=""
+            aria-hidden="true"
+          />
+        </button>
+
+        <div class="nav-menu" id="nav-menu">
+          <a class="is-active" href="index.html" aria-current="page">Catálogo</a>
+          <a href="saved.html">Guardados</a>
+          <!---Aqui va pa registrarse--->
+          <a href="auth.html">Acceso</a> 
+        </div>
+      </nav>
+    </header>
+
+    <main class="catalog-main">
+      <section class="catalog-heading" aria-labelledby="catalog-title">
+        <h1 id="catalog-title">Catálogo de servicios</h1>
+        <p>
+          Encuentra orientación y recursos institucionales diseñados para apoyarte.
+          Explora servicios por categoría o ubicación.
+        </p>
+      </section>
+
+      <section class="search-section" aria-label="Búsqueda de servicios">
+        <form class="search-form" id="service-search" role="search">
+          <div class="search-field">
+            <img src="assets/icons/search.svg" alt="" aria-hidden="true" />
+            <label class="visually-hidden" for="search-input">
+              Buscar servicios por palabra clave
+            </label>
+            <input
+              id="search-input"
+              name="query"
+              type="search"
+              placeholder="Buscar por salud, alimentos, vivienda, educación..."
+              autocomplete="off"
+            />
+          </div>
+          <button class="search-button" type="submit">Buscar</button>
+        </form>
+
+        <div class="filters" aria-label="Filtros del catálogo">
+          <label>
+            <span class="visually-hidden">Filtrar por categoría</span>
+            <select id="category-filter">
+              <option value="">Categoría</option>
+              <option value="Adulto mayor">Adulto mayor</option>
+              <option value="Educación">Educación</option>
+              <option value="Salud">Salud</option>
+              <option value="Social">Social</option>
+              <option value="Vivienda">Vivienda</option>
+            </select>
+          </label>
+
+          <label>
+            <span class="visually-hidden">Filtrar por distrito</span>
+            <select id="district-filter">
+              <option value="">Distrito</option>
+              <option value="Lima">Lima</option>
+              <option value="Nacional">Nacional</option>
+              <option value="San Juan de Lurigancho">
+                San Juan de Lurigancho
+              </option>
+            </select>
+          </label>
+
+          <label>
+            <span class="visually-hidden">Filtrar por modalidad</span>
+            <select id="modality-filter">
+              <option value="">Modalidad</option>
+              <option value="Presencial">Presencial</option>
+              <option value="Virtual">Virtual</option>
+              <option value="Mixta">Mixta</option>
+            </select>
+          </label>
+
+          <button class="clear-filters" id="clear-filters" type="button">
+            <img src="assets/icons/fillter_off.svg" alt="" aria-hidden="true" />
+            Limpiar filtros
+          </button>
+        </div>
+      </section>
+
+      <section class="results-section" aria-labelledby="results-title">
+        <h2 class="visually-hidden" id="results-title">Resultados de servicios</h2>
+        <p class="results-count" id="results-count" aria-live="polite"></p>
+        <div class="services-grid" id="services-grid"></div>
+
+        <div class="empty-state" id="empty-state" hidden>
+          <img src="assets/icons/search.svg" alt="" aria-hidden="true" />
+          <h2>No se encontraron servicios</h2>
+          <p>Prueba con otra palabra o revisa cómo la escribiste.</p>
+          <button id="empty-clear-search" type="button">Ver todos los servicios</button>
+        </div>
+
+        <nav class="pagination" id="pagination" aria-label="Paginación del catálogo">
+          <button class="is-current" type="button" aria-current="page">1</button>
+        </nav>
+      </section>
+    </main>
+
+    <main-footer></main-footer>
+
+    <script src="js/navbar.js"></script>
+    <script src="js/footer.js"></script>
+    <script src="js/saved.js"></script>
+    <script src="js/share.js"></script>
+  </body>
+</html>
