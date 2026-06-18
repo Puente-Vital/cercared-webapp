@@ -460,3 +460,78 @@ body {
     margin-top: var(--space-6);
   }
 }
+
+/* === Desplegable de distrito que SIEMPRE se abre hacia abajo === */
+/* REEMPLAZA el bloque anterior por este en css/catalog.css */
+
+.cs-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+/* El select nativo se oculta pero sigue en el DOM para que catalog.js lo lea */
+.cs-native {
+  position: absolute !important;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+/* Botón visible: mismas medidas que .filters select para que calce igual */
+.cs-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 160px;
+  min-height: 56px;
+  padding: 0 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-size: 16px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cs-btn::after {
+  content: "\25BE";
+  color: var(--color-text-secondary, #6b7280);
+}
+.cs-wrap.open .cs-btn {
+  border-color: var(--color-primary);
+}
+
+/* Lista anclada DEBAJO del botón. Crece a lo ancho según el texto más largo */
+.cs-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  min-width: 100%;                 /* al menos tan ancho como el botón */
+  width: max-content;              /* y se ensancha para que entre el nombre */
+  max-width: min(360px, 90vw);     /* sin pasarse del ancho de pantalla */
+  max-height: 260px;
+  overflow-y: auto;                /* scroll vertical si hay muchas opciones */
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #cbd5e1);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  display: none;
+}
+.cs-wrap.open .cs-panel {
+  display: block;
+}
+
+.cs-opt {
+  padding: 10px 16px;
+  cursor: pointer;
+  white-space: nowrap;             /* el panel ya crece, asi no se corta */
+  font-size: 16px;
+}
+.cs-opt:hover,
+.cs-opt.is-active {
+  background: var(--color-hover, #eaf4ff);
+}

@@ -82,7 +82,9 @@ function applyFilters() {
     const matchesCategory =
       categoryFilter.value === "" || service.category === categoryFilter.value;
     const matchesDistrict =
-      districtFilter.value === "" || service.district === districtFilter.value;
+      districtFilter.value === "" ||
+      service.district === districtFilter.value ||
+      service.district === "Nacional";
     const matchesModality =
       modalityFilter.value === "" || service.modality === modalityFilter.value;
 

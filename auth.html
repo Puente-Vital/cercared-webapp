@@ -41,7 +41,7 @@
         <h1 class="sidebar-title login-title">Bienvenido a <span>CercaRed</span></h1>
         
         <p class="sidebar-subtitle desktop-text">
-          Accede para guardar servicios, personalizar tu experiencia y ayudar a tus familiares a encontrar los apoyos que necesitan.
+          Accede para guardar servicios, personalizar tu experience y ayudar a tus familiares a encontrar los apoyos que necesitan.
         </p>
 
         <p class="sidebar-subtitle mobile-text">
@@ -93,7 +93,10 @@
             </div>
             <div class="input-group">
               <label for="loginPassword">Contraseña</label>
-              <input type="password" id="loginPassword" placeholder="••••••••" aria-describedby="loginPasswordError" />
+              <div class="password-container">
+                <input type="password" id="loginPassword" placeholder="••••••••" aria-describedby="loginPasswordError" />
+                <img src="assets/images/eyesnot.png" class="toggle-password" data-target="loginPassword" alt="Mostrar/Ocultar" />
+              </div>
               <span class="error-message" id="loginPasswordError" aria-live="polite"></span>
             </div>
             <div class="form-link-wrapper">
@@ -135,15 +138,26 @@
               <input type="email" id="registerEmail" placeholder="Escribe tu correo" aria-describedby="registerEmailError" />
               <span class="error-message" id="registerEmailError" aria-live="polite"></span>
             </div>
+            <div class="input-group">
+              <label for="registerPhone">Número de celular</label>
+              <input type="tel" id="registerPhone" placeholder="Ej. 999123456" maxlength="9" />
+              <span class="error-message" id="registerPhoneError"></span>
+            </div>
             <div class="input-row">
               <div class="input-group">
                 <label for="registerPassword">Contraseña</label>
-                <input type="password" id="registerPassword" placeholder="Crea una contraseña segura" aria-describedby="registerPasswordError" />
+                <div class="password-container">
+                  <input type="password" id="registerPassword" placeholder="Crea una contraseña segura" aria-describedby="registerPasswordError" />
+                  <img src="assets/images/eyesnot.png" class="toggle-password" data-target="registerPassword" alt="Mostrar/Ocultar" />
+                </div>
                 <span class="error-message" id="registerPasswordError" aria-live="polite"></span>
               </div>
               <div class="input-group">
                 <label for="registerConfirmPassword">Confirmar contraseña</label>
-                <input type="password" id="registerConfirmPassword" placeholder="Repite tu contraseña" aria-describedby="registerConfirmPasswordError" />
+                <div class="password-container">
+                  <input type="password" id="registerConfirmPassword" placeholder="Repite tu contraseña" aria-describedby="registerConfirmPasswordError" />
+                  <img src="assets/images/eyesnot.png" class="toggle-password" data-target="registerConfirmPassword" alt="Mostrar/Ocultar" />
+                </div>
                 <span class="error-message" id="registerConfirmPasswordError" aria-live="polite"></span>
               </div>
             </div>
@@ -178,6 +192,55 @@
         </div>
 
       </div>
+    </div>
+  </div>
+
+  <div id="recoveryModal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <button class="modal-close" id="closeModal">&times;</button>
+
+      <div id="recoveryStep1">
+        <h3>Recuperar contraseña</h3>
+        <p>Ingresa tu correo electrónico registrado para buscar tu cuenta.</p>
+        <div class="input-group">
+          <label for="recoveryEmail">Correo electrónico</label>
+          <input type="email" id="recoveryEmail" placeholder="Escribe tu correo" />
+          <span class="error-message" id="recoveryEmailError"></span>
+        </div>
+        <button class="btn-primary" id="btnRecoveryStep1">Siguiente</button>
+      </div>
+
+      <div id="recoveryStep2" class="hidden">
+        <h3>Verificación de seguridad</h3>
+        <p>Para proteger tu cuenta, completa tu número de celular terminado en <strong id="maskedPhoneHint"></strong>.</p>
+        <div class="input-group">
+          <label for="recoveryPhone">Número de celular</label>
+          <input type="tel" id="recoveryPhone" placeholder="Ej. 999123456" maxlength="9" />
+          <span class="error-message" id="recoveryPhoneError"></span>
+        </div>
+        <button class="btn-primary" id="btnRecoveryStep2">Verificar</button>
+      </div>
+
+      <div id="recoveryStep3" class="hidden">
+        <h3>Nueva contraseña</h3>
+        <p>Crea una nueva contraseña para tu cuenta.</p>
+        <div class="input-group">
+          <label for="newPassword">Nueva contraseña</label>
+          <div class="password-container">
+            <input type="password" id="newPassword" placeholder="Crea una contraseña" />
+            <img src="assets/images/eyesnot.png" class="toggle-password" data-target="newPassword" alt="Mostrar/Ocultar" />
+          </div>
+          <span class="error-message" id="newPasswordError"></span>
+        </div>
+        <button class="btn-primary" id="btnRecoveryStep3">Cambiar contraseña</button>
+      </div>
+
+      <div id="recoveryStep4" class="hidden">
+        <h3>¡Contraseña actualizada!</h3>
+        <p>Tu contraseña ha sido cambiada exitosamente. Ya puedes iniciar sesión con tu nueva clave.</p>
+        <button class="btn-primary" id="btnRecoveryFinish">Ir a iniciar sesión</button>
+      </div>
+
     </div>
   </div>
 
