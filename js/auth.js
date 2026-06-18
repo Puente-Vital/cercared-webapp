@@ -19,12 +19,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const registerForm = document.getElementById('registerForm');
   const registerName = document.getElementById('registerName');
   const registerEmail = document.getElementById('registerEmail');
+  const registerPhone = document.getElementById('registerPhone');
   const registerPassword = document.getElementById('registerPassword');
   const registerConfirmPassword = document.getElementById('registerConfirmPassword');
   const registerTerms = document.getElementById('registerTerms');
 
   const registerNameError = document.getElementById('registerNameError');
   const registerEmailError = document.getElementById('registerEmailError');
+  const registerPhoneError = document.getElementById('registerPhoneError');
   const registerPasswordError = document.getElementById('registerPasswordError');
   const registerConfirmPasswordError = document.getElementById('registerConfirmPasswordError');
   const registerTermsError = document.getElementById('registerTermsError');
@@ -97,18 +99,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const users = getUsers();
       const existingUser = users.find(u => u.email === emailValue);
 
-    if (!existingUser) {
-            loginEmail.classList.add('input-error');
-            loginEmailError.textContent = "Este correo no está registrado.";
-          } else if (existingUser.password !== passwordValue) {
-            loginPassword.classList.add('input-error');
-            loginPasswordError.textContent = "Contraseña incorrecta.";
-          } else {
-                  localStorage.setItem('cercared_currentUser', JSON.stringify(existingUser));                 
-                  window.CercaRedNavbar?.updateAuthLink();
-                  loginForm.reset();                
-                  window.location.href = 'index.html';
-                }
+      if (!existingUser) {
+        loginEmail.classList.add('input-error');
+        loginEmailError.textContent = "Este correo no está registrado.";
+      } else if (existingUser.password !== passwordValue) {
+        loginPassword.classList.add('input-error');
+        loginPasswordError.textContent = "Contraseña incorrecta.";
+      } else {
+        localStorage.setItem('cercared_currentUser', JSON.stringify(existingUser));                
+        window.CercaRedNavbar?.updateAuthLink();
+        loginForm.reset();                
+        window.location.href = 'index.html';
+      }
     }
   });
 
@@ -134,6 +136,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const emailValue = registerEmail.value.trim();
     const passwordValue = registerPassword.value.trim();
     const confirmPasswordValue = registerConfirmPassword.value.trim();
+    const phoneValue = registerPhone.value.trim();
+    const phoneRegex = /^[0-9]{9}$/;
 
     if (nameValue === "") {
       registerNameError.textContent = "Por favor, ingresa tu nombre completo.";
@@ -155,6 +159,19 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       registerEmailError.textContent = "";
       registerEmail.classList.remove('input-error');
+    }
+
+    if (phoneValue === "") {
+      registerPhoneError.textContent = "Por favor, ingresa tu número de celular.";
+      registerPhone.classList.add('input-error');
+      isValid = false;
+    } else if (!phoneRegex.test(phoneValue)) {
+      registerPhoneError.textContent = "Ingresa un número válido de 9 dígitos.";
+      registerPhone.classList.add('input-error');
+      isValid = false;
+    } else {
+      registerPhoneError.textContent = "";
+      registerPhone.classList.remove('input-error');
     }
 
     if (passwordValue === "") {
@@ -197,6 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveUser({
           name: nameValue,
           email: emailValue,
+          phone: phoneValue,
           password: passwordValue
         });
         
@@ -221,6 +239,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  registerPhone.addEventListener('input', () => {
+    registerPhone.value = registerPhone.value.replace(/[^0-9]/g, '');
+    
+    if (registerPhone.value.trim() !== "" && /^[0-9]{9}$/.test(registerPhone.value.trim())) {
+      registerPhoneError.textContent = "";
+      registerPhone.classList.remove('input-error');
+    }
+  });
+
   registerPassword.addEventListener('input', () => {
     if (registerPassword.value.trim() !== "") {
       registerPasswordError.textContent = "";
@@ -240,6 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
       registerTermsError.textContent = "";
     }
   });
+
   const socialButtons = document.querySelectorAll('.btn-social');
   
   socialButtons.forEach(button => {
@@ -250,21 +278,141 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const forgotPasswordLink = document.getElementById('forgotPassword');
-  
+  const recoveryModal = document.getElementById('recoveryModal');
+  const closeModal = document.getElementById('closeModal');
+
+  const step1 = document.getElementById('recoveryStep1');
+  const step2 = document.getElementById('recoveryStep2');
+  const step3 = document.getElementById('recoveryStep3');
+  const step4 = document.getElementById('recoveryStep4');
+
+  const btnStep1 = document.getElementById('btnRecoveryStep1');
+  const btnStep2 = document.getElementById('btnRecoveryStep2');
+  const btnStep3 = document.getElementById('btnRecoveryStep3');
+  const btnFinish = document.getElementById('btnRecoveryFinish');
+
+  const recEmail = document.getElementById('recoveryEmail');
+  const recPhone = document.getElementById('recoveryPhone');
+  const newPass = document.getElementById('newPassword');
+
+  const recEmailError = document.getElementById('recoveryEmailError');
+  const recPhoneError = document.getElementById('recoveryPhoneError');
+  const newPassError = document.getElementById('newPasswordError');
+  const maskedPhoneHint = document.getElementById('maskedPhoneHint');
+
+  let recoveryUser = null; 
+
   forgotPasswordLink.addEventListener('click', (e) => {
     e.preventDefault();
-    
-    const emailPrompt = prompt("Por favor, ingresa tu correo electrónico para restablecer tu contraseña:");
-    
-    if (emailPrompt === null) {
+    recoveryModal.classList.remove('hidden');
+    step1.classList.remove('hidden');
+    step2.classList.add('hidden');
+    step3.classList.add('hidden');
+    step4.classList.add('hidden');
+    recEmail.value = '';
+    recPhone.value = '';
+    newPass.value = '';
+    recEmail.classList.remove('input-error');
+    recEmailError.textContent = '';
+  });
+
+  closeModal.addEventListener('click', () => {
+    recoveryModal.classList.add('hidden');
+  });
+
+  btnStep1.addEventListener('click', () => {
+    const email = recEmail.value.trim();
+    if (email === '') {
+      recEmailError.textContent = 'Ingresa tu correo.';
+      recEmail.classList.add('input-error');
       return;
     }
-    
-    if (emailPrompt.trim() === "") {
-      alert("Debes ingresar un correo electrónico válido.");
+
+    const users = getUsers();
+    recoveryUser = users.find(u => u.email === email);
+
+    if (!recoveryUser) {
+      recEmailError.textContent = 'Este correo no está registrado en el sistema.';
+      recEmail.classList.add('input-error');
+    } else if (!recoveryUser.phone) {
+      recEmailError.textContent = 'Esta cuenta no tiene celular registrado. No se puede recuperar.';
+      recEmail.classList.add('input-error');
     } else {
-      alert(`Se ha enviado un enlace de restablecimiento al correo: ${emailPrompt}. (Simulación de sistema)`);
+      recEmailError.textContent = '';
+      recEmail.classList.remove('input-error');
+      
+      const phoneStr = recoveryUser.phone;
+      const lastTwo = phoneStr.slice(-2);
+      maskedPhoneHint.textContent = `#######${lastTwo}`;
+      
+      step1.classList.add('hidden');
+      step2.classList.remove('hidden');
     }
+  });
+
+  btnStep2.addEventListener('click', () => {
+    const phone = recPhone.value.trim();
+    if (phone !== recoveryUser.phone) {
+      recPhoneError.textContent = 'El número es incorrecto. Inténtalo de nuevo.';
+      recPhone.classList.add('input-error');
+    } else {
+      recPhoneError.textContent = '';
+      recPhone.classList.remove('input-error');
+      step2.classList.add('hidden');
+      step3.classList.remove('hidden');
+    }
+  });
+
+  recPhone.addEventListener('input', () => {
+    recPhone.value = recPhone.value.replace(/[^0-9]/g, '');
+  });
+
+  btnStep3.addEventListener('click', () => {
+    const pass = newPass.value.trim();
+    
+    if (pass === '') {
+      newPassError.textContent = 'Ingresa una nueva contraseña segura.';
+      newPass.classList.add('input-error');
+    } else if (pass === recoveryUser.password) {
+      newPassError.textContent = 'La nueva contraseña no puede ser igual a la anterior.';
+      newPass.classList.add('input-error');
+    } else {
+      newPassError.textContent = '';
+      newPass.classList.remove('input-error');
+
+      const users = getUsers();
+      const userIndex = users.findIndex(u => u.email === recoveryUser.email);
+      if (userIndex !== -1) {
+        users[userIndex].password = pass;
+        localStorage.setItem('cercared_users', JSON.stringify(users));
+        recoveryUser.password = pass; 
+      }
+
+      step3.classList.add('hidden');
+      step4.classList.remove('hidden');
+    }
+  });
+
+  btnFinish.addEventListener('click', () => {
+    recoveryModal.classList.add('hidden');
+    document.getElementById('loginEmail').value = recoveryUser.email;
+  });
+
+  const togglePasswordIcons = document.querySelectorAll('.toggle-password');
+
+  togglePasswordIcons.forEach(icon => {
+    icon.addEventListener('click', () => {
+      const targetId = icon.getAttribute('data-target');
+      const inputField = document.getElementById(targetId);
+
+      if (inputField.type === 'password') {
+        inputField.type = 'text';
+        icon.src = 'assets/images/eyes.png';
+      } else {
+        inputField.type = 'password';
+        icon.src = 'assets/images/eyesnot.png';
+      }
+    });
   });
 
 });
