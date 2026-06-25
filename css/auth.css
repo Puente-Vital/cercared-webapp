@@ -143,9 +143,32 @@ h2 {
   line-height: 1.5;
 }
 
-/* ==========================================================================
-   FORMULARIOS Y ELEMENTOS DE ENTRADA
-   ========================================================================== */
+.sutil-message {
+  color: #2e7d32;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+  
+  align-self: center; 
+  width: 100%;
+  
+  margin-top: 15px;
+  margin-bottom: 15px;
+  
+  display: block; 
+  transition: opacity 0.5s ease;
+  opacity: 1;
+}
+
+.sutil-message.hidden {
+  display: none !important;
+  opacity: 0;
+}
+
+.hidden {
+  display: none !important;
+}
+
 .input-group {
   margin-bottom: 30px;
   display: flex;
