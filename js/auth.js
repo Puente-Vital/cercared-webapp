@@ -1,4 +1,3 @@
-
 window.fbAsyncInit = function() {
   FB.init({
     appId      : '1741999303593859', 
@@ -309,37 +308,44 @@ document.addEventListener('DOMContentLoaded', () => {
   const newPassError = document.getElementById('newPasswordError');
   const maskedPhoneHint = document.getElementById('maskedPhoneHint');
 
-  const btnFacebook = document.getElementById('btnFacebookLogin');
+// --- Configuración unificada para ambos botones de Facebook ---
+  const btnFacebookLogin = document.getElementById('btnFacebookLogin');
+  const btnFacebookRegister = document.getElementById('btnFacebookLogin2');
 
-  if (btnFacebook) {
-    btnFacebook.addEventListener('click', (e) => {
-      e.preventDefault();
-      
-      FB.login(function(response) {
-        if (response.authResponse) {
-          FB.api('/me', { fields: 'name, email' }, function(userInfo) {
-            console.log('Datos recibidos de Facebook:', userInfo);
-            
-            const facebookUser = {
-              name: userInfo.name,
-              email: userInfo.email || `${userInfo.id}@facebook.com`, 
-              source: 'facebook'
-            };
+  const iniciarFlujoFacebook = (e) => {
+    e.preventDefault();
+    FB.login(function(response) {
+      if (response.authResponse) {
+        FB.api('/me', { fields: 'name, email' }, function(userInfo) {
+          console.log('Datos recibidos de Facebook:', userInfo);
+          
+          const facebookUser = {
+            name: userInfo.name,
+            email: userInfo.email || `${userInfo.id}@facebook.com`, 
+            source: 'facebook'
+          };
 
-            localStorage.setItem('cercared_currentUser', JSON.stringify(facebookUser));
-            
-            if (window.CercaRedNavbar?.updateAuthLink) {
-              window.CercaRedNavbar.updateAuthLink();
-            }
-            
-            alert(`¡Bienvenido/a, ${facebookUser.name}! Has iniciado sesión con Facebook.`);
-            window.location.href = 'index.html';
-          });
-        } else {
-          console.log('El usuario canceló el inicio de sesión o no autorizó la app.');
-        }
-      }, { scope: 'email' }); 
-    });
+          localStorage.setItem('cercared_currentUser', JSON.stringify(facebookUser));
+          
+          if (window.CercaRedNavbar?.updateAuthLink) {
+            window.CercaRedNavbar.updateAuthLink();
+          }
+          
+          alert(`¡Bienvenido/a, ${facebookUser.name}! Has iniciado sesión con Facebook.`);
+          window.location.href = 'index.html';
+        });
+      } else {
+        console.log('El usuario canceló el inicio de sesión o no autorizó la app.');
+      }
+    }, { scope: 'email' });
+  };
+
+  // Asignamos la función a ambos botones si existen en la vista
+  if (btnFacebookLogin) {
+    btnFacebookLogin.addEventListener('click', iniciarFlujoFacebook);
+  }
+  if (btnFacebookRegister) {
+    btnFacebookRegister.addEventListener('click', iniciarFlujoFacebook);
   }
 
   let recoveryUser = null; 
@@ -457,4 +463,114 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+
+const googleScript = document.createElement('script');
+  googleScript.src = "https://accounts.google.com/gsi/client";
+  googleScript.async = true;
+  googleScript.defer = true;
+  document.head.appendChild(googleScript);
+
+  let tokenClient;
+
+googleScript.onload = () => {
+
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: '1085551695611-ovkbeh2gsfrb20l54gv4frbafu0ku5nk.apps.googleusercontent.com',
+      scope: 'email profile', // Pedimos permiso para ver el correo y el nombre
+      callback: async (tokenResponse) => {
+        
+        // 3. Cuando Google nos da acceso, buscamos los datos del usuario
+        if (tokenResponse && tokenResponse.access_token) {
+          try {
+            const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+              headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+            });
+            const userInfo = await userInfoResponse.json();
+            
+            console.log("Datos recibidos de Google:", userInfo);
+
+            const googleUser = {
+              name: userInfo.name,
+              email: userInfo.email,
+              source: 'google'
+            };
+
+            // Guardamos el usuario en tu sistema
+            localStorage.setItem('cercared_currentUser', JSON.stringify(googleUser));
+            
+            if (window.CercaRedNavbar?.updateAuthLink) {
+              window.CercaRedNavbar.updateAuthLink();
+            }
+
+            alert(`¡Bienvenido/a, ${googleUser.name}! Has iniciado sesión con Google.`);
+            window.location.href = 'index.html';
+
+          } catch (error) {
+            console.error("Error al obtener los datos del perfil de Google:", error);
+          }
+        }
+      }
+    });
+  };
+
+  const btnGoogleLogin = document.getElementById('btnGoogleLogin');
+  const btnGoogleRegister = document.getElementById('btnGoogleLogin2');
+
+  const iniciarFlujoGoogle = (e) => {
+    e.preventDefault();
+    if (tokenClient) {
+      // Abre la ventana de Google forzosamente, sin cooldowns
+      tokenClient.requestAccessToken();
+    } else {
+      console.log("El cliente de Google aún no termina de cargar.");
+    }
+  };
+
+  if (btnGoogleLogin) {
+    btnGoogleLogin.addEventListener('click', iniciarFlujoGoogle);
+  }
+  if (btnGoogleRegister) {
+    btnGoogleRegister.addEventListener('click', iniciarFlujoGoogle);
+  }
+  
 });
+
+// 4. Función global externa que procesa el login exitoso
+function handleGoogleSignIn(response) {
+  // Cuando usamos requestCode, Google nos devuelve un token de autorización en response.code
+  if (response && (response.credential || response.code)) {
+    
+    let userEmail = "usuario.google@gmail.com";
+    let userName = "Usuario de Google";
+
+    // Si viene credencial (JWT clásico), la decodificamos directamente
+    if (response.credential) {
+      const base64Url = response.credential.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+
+      const googleUserDecoded = JSON.parse(jsonPayload);
+      userName = googleUserDecoded.name;
+      userEmail = googleUserDecoded.email;
+    }
+
+    const googleUser = {
+      name: userName,
+      email: userEmail,
+      source: 'google'
+    };
+
+    localStorage.setItem('cercared_currentUser', JSON.stringify(googleUser));
+    
+    if (window.CercaRedNavbar?.updateAuthLink) {
+      window.CercaRedNavbar.updateAuthLink();
+    }
+
+    alert(`¡Bienvenido/a, ${googleUser.name}! Has iniciado sesión con Google.`);
+    window.location.href = 'index.html';
+  } else {
+    console.log("Error o ventana cerrada en la autenticación de Google.");
+  }
+}
