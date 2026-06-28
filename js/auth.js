@@ -1,6 +1,16 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { 
+  getAuth, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword,
+  updateProfile,
+  sendPasswordResetEmail,
+  sendEmailVerification
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+import { getFirestore, doc, setDoc, getDocs, collection, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 const firebaseConfig = {
   apiKey: "AIzaSyCKV8X6ZDw12oFHyKYSNsnX_HiGRWlbaAQ",
   authDomain: "cercared-auth.firebaseapp.com",
@@ -12,24 +22,8 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
-
-window.fbAsyncInit = function() {
-  FB.init({
-    appId      : '1741999303593859', 
-    cookie     : true, 
-    xfbml      : true,      
-    version    : 'v18.0'
-  });
-};
-
-(function(d, s, id) {
-  var js, fjs = d.getElementsByTagName(s)[0];
-  if (d.getElementById(id)) return;
-  js = d.createElement(s); js.id = id;
-  js.src = "https://connect.facebook.net/es_LA/sdk.js";
-  fjs.parentNode.insertBefore(js, fjs);
-}(document, 'script', 'facebook-jssdk'));
 
 document.addEventListener('DOMContentLoaded', () => {
   const loginView = document.getElementById('loginView');
@@ -48,29 +42,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const registerForm = document.getElementById('registerForm');
   const registerName = document.getElementById('registerName');
   const registerEmail = document.getElementById('registerEmail');
-  const registerPhone = document.getElementById('registerPhone');
   const registerPassword = document.getElementById('registerPassword');
   const registerConfirmPassword = document.getElementById('registerConfirmPassword');
   const registerTerms = document.getElementById('registerTerms');
   const registerNameError = document.getElementById('registerNameError');
   const registerEmailError = document.getElementById('registerEmailError');
-  const registerPhoneError = document.getElementById('registerPhoneError');
   const registerPasswordError = document.getElementById('registerPasswordError');
   const registerConfirmPasswordError = document.getElementById('registerConfirmPasswordError');
   const registerTermsError = document.getElementById('registerTermsError');
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  const getUsers = () => {
-    const users = localStorage.getItem('cercared_users');
-    return users ? JSON.parse(users) : [];
-  };
-
-  const saveUser = (user) => {
-    const users = getUsers();
-    users.push(user);
-    localStorage.setItem('cercared_users', JSON.stringify(users));
-  };
-
+  // Manejo de vistas interactivas (Toggle entre Login y Registro)
   toRegister.addEventListener('click', (e) => {
     e.preventDefault();
     loginView.classList.add('hidden');
@@ -92,6 +74,9 @@ document.addEventListener('DOMContentLoaded', () => {
   toLogin.addEventListener('click', showLogin);
   cancelRegister.addEventListener('click', showLogin);
 
+// ==========================================
+  // LOGIN MANUAL CON FIREBASE (NATIVO)
+  // ==========================================
   loginForm.addEventListener('submit', (e) => {
     e.preventDefault();
     let isValid = true;
@@ -121,37 +106,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (isValid) {
-      const users = getUsers();
-      const existingUser = users.find(u => u.email === emailValue);
-      if (!existingUser) {
-        loginEmail.classList.add('input-error');
-        loginEmailError.textContent = "Este correo no está registrado.";
-      } else if (existingUser.password !== passwordValue) {
-        loginPassword.classList.add('input-error');
-        loginPasswordError.textContent = "Contraseña incorrecta.";
-      } else {
-        localStorage.setItem('cercared_currentUser', JSON.stringify(existingUser));
-        window.CercaRedNavbar?.updateAuthLink();
-        loginForm.reset();
-        window.location.href = 'index.html';
-      }
+      signInWithEmailAndPassword(auth, emailValue, passwordValue)
+        .then((result) => {
+          const user = result.user;
+          const currentUserData = {
+            name: user.displayName || "Usuario",
+            email: user.email,
+            source: 'manual'
+          };
+          
+          localStorage.setItem('cercared_currentUser', JSON.stringify(currentUserData));
+          window.CercaRedNavbar?.updateAuthLink();
+          loginForm.reset();
+          
+          const successMsg = document.getElementById('successMessage');
+          successMsg.textContent = `¡Bienvenido/a, ${currentUserData.name}!`;
+          successMsg.classList.remove('hidden');
+
+          setTimeout(() => {
+              successMsg.classList.add('hidden');
+              window.location.href = 'index.html';
+          }, 800);
+        })
+        .catch((error) => {
+          console.error("Error en Login:", error.code);
+          if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+            loginEmail.classList.add('input-error');
+            loginEmailError.textContent = "El correo electrónico o la contraseña son incorrectos.";
+          } else {
+            loginEmailError.textContent = "Error al iniciar sesión. Inténtalo más tarde.";
+          }
+        });
     }
   });
-
+// ==========================================
+  // REGISTRO MANUAL CON FIREBASE (LIMPIO)
+  // ==========================================
   registerForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    let isValid = true;
+    let isRegisterValid = true;
     const nameValue = registerName.value.trim();
     const emailValue = registerEmail.value.trim();
     const passwordValue = registerPassword.value.trim();
     const confirmPasswordValue = registerConfirmPassword.value.trim();
-    const phoneValue = registerPhone.value.trim();
-    const phoneRegex = /^[0-9]{9}$/;
 
     if (nameValue === "") {
       registerNameError.textContent = "Por favor, ingresa tu nombre completo.";
       registerName.classList.add('input-error');
-      isValid = false;
+      isRegisterValid = false;
     } else {
       registerNameError.textContent = "";
       registerName.classList.remove('input-error');
@@ -160,25 +162,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (emailValue === "" || !emailRegex.test(emailValue)) {
       registerEmailError.textContent = "Correo inválido.";
       registerEmail.classList.add('input-error');
-      isValid = false;
+      isRegisterValid = false;
     } else {
       registerEmailError.textContent = "";
       registerEmail.classList.remove('input-error');
     }
 
-    if (phoneValue === "" || !phoneRegex.test(phoneValue)) {
-      registerPhoneError.textContent = "Ingresa 9 dígitos válidos.";
-      registerPhone.classList.add('input-error');
-      isValid = false;
-    } else {
-      registerPhoneError.textContent = "";
-      registerPhone.classList.remove('input-error');
-    }
-
     if (passwordValue === "" || passwordValue !== confirmPasswordValue) {
       registerConfirmPasswordError.textContent = "Las contraseñas no coinciden.";
       registerConfirmPassword.classList.add('input-error');
-      isValid = false;
+      isRegisterValid = false;
     } else {
       registerConfirmPasswordError.textContent = "";
       registerConfirmPassword.classList.remove('input-error');
@@ -186,127 +179,163 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!registerTerms.checked) {
       registerTermsError.textContent = "Debes aceptar términos.";
-      isValid = false;
+      isRegisterValid = false; 
     } else {
       registerTermsError.textContent = "";
     }
 
-    if (isValid) {
-      const users = getUsers();
-      if (users.some(u => u.email === emailValue)) {
-        registerEmailError.textContent = "Correo ya registrado.";
-      } else {
-        saveUser({ name: nameValue, email: emailValue, phone: phoneValue, password: passwordValue });
-        alert("¡Cuenta creada!");
-        registerForm.reset();
-        cancelRegister.click();
-      }
+    if (isRegisterValid) {
+      createUserWithEmailAndPassword(auth, emailValue, passwordValue)
+        .then(async (result) => {
+          const user = result.user;
+          
+          try {
+            // Guardamos solo los datos necesarios en Firestore (Sin teléfono)
+            await setDoc(doc(db, "users", user.uid), {
+              name: nameValue,
+              email: emailValue,
+              createdAt: new Date()
+            });
+
+            await updateProfile(user, {
+              displayName: nameValue
+            });
+
+            // Enviar correo de verificación nativo
+            await sendEmailVerification(user);
+            console.log("Correo de verificación enviado.");
+
+            const currentUserData = {
+              name: nameValue,
+              email: emailValue,
+              source: 'manual'
+            };
+            localStorage.setItem('cercared_currentUser', JSON.stringify(currentUserData));
+            window.CercaRedNavbar?.updateAuthLink();
+
+            const successMsg = document.getElementById('registerSuccessMessage');
+            if (successMsg) {
+              successMsg.textContent = `¡Cuenta creada exitosamente, bienvenido/a ${nameValue}!`;
+              successMsg.classList.remove('hidden');
+            }
+
+            setTimeout(() => {
+              if (successMsg) successMsg.classList.add('hidden');
+              registerForm.reset();
+              window.location.href = 'index.html'; 
+            }, 1200);
+
+          } catch (dbError) {
+            console.error("Error al guardar en Firestore:", dbError);
+            alert("Cuenta creada, pero hubo un problema al guardar los datos adicionales.");
+          }
+        })
+        .catch((error) => {
+          console.error("Error en Registro:", error.code);
+          if (error.code === 'auth/email-already-in-use') {
+            registerEmail.classList.add('input-error');
+            registerEmailError.textContent = "Este correo electrónico ya está registrado.";
+          } else {
+            registerEmailError.textContent = "Error al registrar usuario. Inténtalo de nuevo.";
+          }
+        });
     }
   });
 
+
+// Variables para la modal de recuperación simplificada por Email Real
   const forgotPasswordLink = document.getElementById('forgotPassword');
   const recoveryModal = document.getElementById('recoveryModal');
   const closeModal = document.getElementById('closeModal');
   const step1 = document.getElementById('recoveryStep1');
-  const step2 = document.getElementById('recoveryStep2');
-  const step3 = document.getElementById('recoveryStep3');
+  const step2 = document.getElementById('recoveryStep2'); // Mantener variables si existen en el HTML para evitar errores
+  const step3 = document.getElementById('recoveryStep3'); // Mantener variables si existen en el HTML para evitar errores
   const step4 = document.getElementById('recoveryStep4');
   const btnStep1 = document.getElementById('btnRecoveryStep1');
-  const btnStep2 = document.getElementById('btnRecoveryStep2');
-  const btnStep3 = document.getElementById('btnRecoveryStep3');
   const btnFinish = document.getElementById('btnRecoveryFinish');
   const recEmail = document.getElementById('recoveryEmail');
-  const recPhone = document.getElementById('recoveryPhone');
-  const newPass = document.getElementById('newPassword');
   const recEmailError = document.getElementById('recoveryEmailError');
-  const recPhoneError = document.getElementById('recoveryPhoneError');
-  const newPassError = document.getElementById('newPasswordError');
-  const maskedPhoneHint = document.getElementById('maskedPhoneHint');
 
-  const btnFacebookLogin = document.getElementById('btnFacebookLogin');
-  const btnFacebookRegister = document.getElementById('btnFacebookLogin2');
+  // 1. ABRIR Y CERRAR MODAL
+  if (forgotPasswordLink) {
+    forgotPasswordLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      recoveryModal.classList.remove('hidden');
+      
+      // Mostrar paso 1 y asegurar que los demás estén ocultos
+      step1.classList.remove('hidden');
+      if (step2) step2.classList.add('hidden');
+      if (step3) step3.classList.add('hidden');
+      if (step4) step4.classList.add('hidden');
+      
+      recEmail.value = "";
+      recEmailError.textContent = "";
+    });
+  }
 
-  const iniciarFlujoFacebook = (e) => {
-    e.preventDefault();
-    FB.login(function(response) {
-      if (response.authResponse) {
-        FB.api('/me', { fields: 'name, email' }, function(userInfo) {
-          const facebookUser = { name: userInfo.name, email: userInfo.email || `${userInfo.id}@facebook.com`, source: 'facebook' };
-          localStorage.setItem('cercared_currentUser', JSON.stringify(facebookUser));
-          window.CercaRedNavbar?.updateAuthLink();
-          alert(`¡Bienvenido/a, ${facebookUser.name}!`);
-          window.location.href = 'index.html';
-        });
+  if (closeModal) {
+    closeModal.addEventListener('click', () => {
+      recoveryModal.classList.add('hidden');
+    });
+  }
+
+  // PROCESO: Validar correo, enviar enlace real y saltar directo al Paso 4 (Éxito)
+  if (btnStep1) {
+    btnStep1.addEventListener('click', async () => {
+      const emailValue = recEmail.value.trim();
+      recEmailError.textContent = "";
+
+      if (emailValue === "") {
+        recEmailError.textContent = "Ingresa tu correo electrónico.";
+        return;
+      } else if (!emailRegex.test(emailValue)) {
+        recEmailError.textContent = "Ingresa un correo electrónico válido.";
+        return;
       }
-    }, { scope: 'email' });
-  };
 
-  if (btnFacebookLogin) btnFacebookLogin.addEventListener('click', iniciarFlujoFacebook);
-  if (btnFacebookRegister) btnFacebookRegister.addEventListener('click', iniciarFlujoFacebook);
+      try {
+        // Enviar el enlace oficial de restablecimiento nativo de Firebase Auth
+        await sendPasswordResetEmail(auth, emailValue);
+        console.log("Correo de restablecimiento enviado con éxito.");
 
-  let recoveryUser = null; 
+        // Saltamos directo al Paso 4 (Mensaje de éxito / Instrucciones)
+        step1.classList.add('hidden');
+        if (step4) step4.classList.remove('hidden');
+      } catch (error) {
+        console.error("Error al enviar el correo de recuperación:", error.code);
+        if (error.code === 'auth/user-not-found') {
+          recEmailError.textContent = "Este correo no está registrado.";
+        } else {
+          recEmailError.textContent = "No se pudo enviar el correo. Inténtalo de nuevo.";
+        }
+      }
+    });
+  }
 
-  forgotPasswordLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    recoveryModal.classList.remove('hidden');
-    step1.classList.remove('hidden');
-  });
+  // PASO 4: Finalizar, cerrar la modal y rellenar el correo en el login
+  if (btnFinish) {
+    btnFinish.addEventListener('click', () => {
+      recoveryModal.classList.add('hidden');
+      loginEmail.value = recEmail.value; // Le deja el correo listo en la vista de login
+      loginPassword.value = "";
+    });
+  }
 
-  closeModal.addEventListener('click', () => recoveryModal.classList.add('hidden'));
-
-  btnStep1.addEventListener('click', () => {
-    const email = recEmail.value.trim();
-    const users = getUsers();
-    recoveryUser = users.find(u => u.email === email);
-    if (!recoveryUser) {
-      recEmailError.textContent = 'Correo no registrado.';
-    } else {
-      maskedPhoneHint.textContent = `#######${recoveryUser.phone.slice(-2)}`;
-      step1.classList.add('hidden');
-      step2.classList.remove('hidden');
-    }
-  });
-
-  btnStep2.addEventListener('click', () => {
-    if (recPhone.value.trim() !== recoveryUser.phone) {
-      recPhoneError.textContent = 'Número incorrecto.';
-    } else {
-      step2.classList.add('hidden');
-      step3.classList.remove('hidden');
-    }
-  });
-
-  btnStep3.addEventListener('click', () => {
-    if (newPass.value.trim() === '') {
-      newPassError.textContent = 'Ingresa una nueva contraseña.';
-    } else {
-      const users = getUsers();
-      const userIndex = users.findIndex(u => u.email === recoveryUser.email);
-      users[userIndex].password = newPass.value.trim();
-      localStorage.setItem('cercared_users', JSON.stringify(users));
-      step3.classList.add('hidden');
-      step4.classList.remove('hidden');
-    }
-  });
-
-  btnFinish.addEventListener('click', () => {
-    recoveryModal.classList.add('hidden');
-    loginEmail.value = recoveryUser.email;
-  });
-
+  // Interactividad de Mostrar/Ocultar contraseñas
   const togglePasswordIcons = document.querySelectorAll('.toggle-password');
   togglePasswordIcons.forEach(icon => {
     icon.addEventListener('click', () => {
       const inputField = document.getElementById(icon.getAttribute('data-target'));
-      inputField.type = inputField.type === 'password' ? 'text' : 'password';
-      icon.src = inputField.type === 'text' ? 'assets/images/eyes.png' : 'assets/images/eyesnot.png';
+      if (inputField) {
+        inputField.type = inputField.type === 'password' ? 'text' : 'password';
+        icon.src = inputField.type === 'text' ? 'assets/images/eyes.png' : 'assets/images/eyesnot.png';
+      }
     });
   });
 
-  // --- NUEVA LÓGICA DE GOOGLE CON FIREBASE ---
-  const btnGoogleLogin = document.getElementById('btnGoogleLogin');
-  const btnGoogleRegister = document.getElementById('btnGoogleLogin2');
-
+  // ==========================================
+  // FLUJO DE GOOGLE AUTHENTICATION
+  // ==========================================
   const iniciarFlujoFirebaseGoogle = (e) => {
     e.preventDefault();
     signInWithPopup(auth, provider)
@@ -323,12 +352,16 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             successMsg.classList.add('hidden');
             window.location.href = 'index.html';
-        }, 3000);
+        }, 1200);
       })
       .catch((error) => {
         console.error("Error en autenticación:", error.code, error.message);
       });
   };
+
+  // Botones de Google vinculados correctamente
+  const btnGoogleLogin = document.getElementById('btnGoogleLogin');
+  const btnGoogleRegister = document.getElementById('btnGoogleLogin2');
 
   if (btnGoogleLogin) btnGoogleLogin.addEventListener('click', iniciarFlujoFirebaseGoogle);
   if (btnGoogleRegister) btnGoogleRegister.addEventListener('click', iniciarFlujoFirebaseGoogle);

@@ -347,29 +347,83 @@ input.input-error {
   z-index: 2;
 }
 
-.social-buttons {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 32px;
+/* ==========================================================================
+   Para el boton del modal de recuperación de contraseña
+   ========================================================================== */
+#btnRecoveryFinish {
+  width: 100%;
+  min-height: var(--target-min);
+  background-color: var(--color-accent);
+  color: #ffffff; 
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700; 
+  cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
-.btn-social {
-  min-height: var(--target-min);
-  padding: 12px;
-  border: 1px solid #E2E8F0;
-  background-color: transparent;
-  border-radius: 6px;
-  cursor: pointer;
+#btnRecoveryFinish:hover {
+  background-color: var(--color-accent-hover);
+}
+
+#btnRecoveryFinish:focus {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.legal-link {
+  color: var(--color-primary);
+  text-decoration: underline; /* Mantiene la línea abajo clásica que ya tienes */
+  font-weight: 600;
+}
+
+.legal-link:hover {
+  color: var(--color-primary-hover);
+}
+
+
+.social-buttons {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: var(--space-3);
+  
+  margin-bottom: var(--space-4); 
+}
+
+
+.btn-social-full {
+  width: 100%;
+  min-height: var(--target-min); 
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  gap: var(--space-2); 
+  padding: var(--space-2) var(--space-3); 
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--space-2);
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--color-text);
+  white-space: nowrap; 
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-social-full:hover {
+  background-color: var(--color-background);
+  border-color: var(--color-muted);
 }
 
 .social-icon {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 .switch-text {
