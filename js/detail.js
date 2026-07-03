@@ -405,51 +405,106 @@ function closeSummaryModal(overlay, previousFocus) {
  
 /* ── Descargar PDF ── */
 function downloadSummaryPDF(data) {
-  const requirements = data.requirements.map((r) => `  • ${r.title}`).join("\n");
-  const documents = data.documents.map((d) => `  • ${d.title}`).join("\n");
-  const steps = data.steps.map((s, i) => `  ${i + 1}. ${s.title}`).join("\n");
-  const channels = data.channels.map((c) => `  • ${c.title}: ${c.description}`).join("\n");
- 
-  const content = [
-    `RESUMEN DEL SERVICIO - CERCARED`,
-    `================================`,
-    ``,
-    `${data.name.toUpperCase()}`,
-    `Categoría: ${data.category}  |  Entidad: ${data.shortEntity}  |  Costo: ${data.cost}`,
-    ``,
-    `DESCRIPCIÓN`,
-    `-----------`,
-    data.description,
-    ``,
-    `REQUISITOS PRINCIPALES`,
-    `----------------------`,
-    requirements,
-    ``,
-    `DOCUMENTOS BÁSICOS`,
-    `------------------`,
-    documents,
-    ``,
-    `PASOS`,
-    `-----`,
-    steps,
-    ``,
-    `CANALES DE ATENCIÓN`,
-    `-------------------`,
-    channels,
-    ``,
-    `Canal oficial: ${data.officialUrl}`,
-    ``,
-    `Generado desde CercaRed · Servicios sociales cerca de ti`,
-  ].join("\n");
- 
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `resumen-${data.id}.txt`;
-  a.click();
-  URL.revokeObjectURL(url);
- 
+  // 1. Acceder a jsPDF desde el objeto global window
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({
+    orientation: 'p',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  // 2. Encabezado Institucional de CercaRed
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(22);
+  doc.setTextColor(26, 38, 57); // Azul oscuro elegante
+  doc.text("RESUMEN DEL SERVICIO - CERCARED", 15, 20);
+  
+  doc.setDrawColor(230, 0, 35); // Línea decorativa color rojo tipo Pinterest
+  doc.setLineWidth(1);
+  doc.line(15, 24, 195, 24);
+
+  // 3. Título del Servicio y Metadatos
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.setTextColor(230, 0, 35);
+  doc.text(data.name.toUpperCase(), 15, 34);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Categoría: ${data.category}  |  Entidad: ${data.shortEntity}  |  Costo: ${data.cost}`, 15, 40);
+
+  // Variable de control vertical (para evitar que se encimen los textos)
+  let currentY = 52;
+
+  // --- FUNCIÓN INTERNA AUXILIAR PARA IMPRIMIR SECCIONES Y EVITAR DESBORDES ---
+  function agregarSeccion(titulo, elementos, esLista = true) {
+    if (!elementos || elementos.length === 0) return;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(40, 40, 40);
+    doc.text(titulo, 15, currentY);
+    currentY += 6;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+
+    if (Array.isArray(elementos)) {
+      elementos.forEach((item, index) => {
+        let textoLinea = esLista ? `• ${item.title}` : `${index + 1}. ${item.title}`;
+        
+        // Si son canales, formateamos con su descripción
+        if (titulo === "CANALES DE ATENCIÓN") {
+          textoLinea = `• ${item.title}: ${item.description}`;
+        }
+
+        const lineasFragmentadas = doc.splitTextToSize(textoLinea, 175);
+        doc.text(lineasFragmentadas, 18, currentY);
+        currentY += (lineasFragmentadas.length * 5);
+      });
+    } else {
+      // Para texto plano largo como la Descripción
+      const lineasFragmentadas = doc.splitTextToSize(elementos, 175);
+      doc.text(lineasFragmentadas, 15, currentY);
+      currentY += (lineasFragmentadas.length * 5);
+    }
+    currentY += 6; // Espacio de separación entre bloques de contenido
+  }
+
+  // 4. Inyección del contenido dinámico de CercaRed
+  agregarSeccion("DESCRIPCIÓN", data.description, false);
+  agregarSeccion("REQUISITOS PRINCIPALES", data.requirements, true);
+  agregarSeccion("DOCUMENTOS BÁSICOS", data.documents, true);
+  
+  // Para los Pasos, pasamos 'false' en el tercer parámetro para que use numeración (1, 2, 3...)
+  agregarSeccion("PASOS", data.steps, false);
+  agregarSeccion("CANALES DE ATENCIÓN", data.channels, true);
+
+  // 5. Enlace Oficial y Cierre del Documento
+  if (currentY > 260) {
+    doc.addPage();
+    currentY = 20; // Si el contenido es largo, crea otra hoja y reinicia el margen superior
+  }
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(26, 38, 57);
+  doc.text(`Canal oficial: ${data.officialUrl}`, 15, currentY + 4);
+
+  // Pie de página fijo al final
+  doc.setDrawColor(220, 220, 220);
+  doc.line(15, 278, 195, 278);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(150, 150, 150);
+  doc.text("Generado desde CercaRed · Servicios sociales cerca de ti", 15, 284);
+
+  // 6. Ejecutar la descarga del archivo PDF real
+  doc.save(`resumen-${data.id}.pdf`);
+  
+  // Tu feedback visual nativo original
   showDetailToast("Resumen descargado");
 }
 
