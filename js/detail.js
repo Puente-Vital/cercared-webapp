@@ -1,8 +1,30 @@
+// ==========================================================================
+// IMPORTACIONES E INICIALIZACIÓN DE FIREBASE CORE
+// ==========================================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCKV8X6ZDw12oFHyKYSNsnX_HiGRWlbaAQ",
+  authDomain: "cercared-auth.firebaseapp.com",
+  projectId: "cercared-auth",
+  storageBucket: "cercared-auth.firebasestorage.app",
+  messagingSenderId: "303320791334",
+  appId: "1:303320791334:web:4b32a407f6cb0748ae69e7"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// CONFIGURACIÓN DINÁMICA DE PARÁMETROS URL
 const detailRoot = document.querySelector("#service-detail");
 const params = new URLSearchParams(window.location.search);
 const serviceId = params.get("id") || "pension-65";
 const service = (window.CercaRedServices || []).find((item) => item.id === serviceId);
 
+// ==========================================================================
+// FUNCIONES DE RENDERIZADO DEL COMPONENTE DETALLE
+// ==========================================================================
 function renderCards(items) {
   return items
     .map(
@@ -265,6 +287,7 @@ function wireDetailActions(data) {
 
   summaryButton.addEventListener("click", () => openSummaryModal(data));
 }
+
 function buildSummaryModal(data) {
   const requirementItems = data.requirements
     .map((r) => `<div class="summary-modal-item">${r.title}</div>`)
@@ -345,11 +368,8 @@ function buildSummaryModal(data) {
   `;
 }
  
-/* ── Abrir modal ── */
 function openSummaryModal(data) {
-  // Evitar duplicados
   document.querySelector("#summary-modal-overlay")?.remove();
- 
   document.body.insertAdjacentHTML("beforeend", buildSummaryModal(data));
  
   const overlay = document.querySelector("#summary-modal-overlay");
@@ -357,22 +377,17 @@ function openSummaryModal(data) {
   const copyBtn = document.querySelector("#summary-modal-copy-btn");
   const pdfBtn = document.querySelector("#summary-modal-pdf-btn");
  
-  // Abrir con animación
   requestAnimationFrame(() => overlay.classList.add("is-open"));
  
-  // Guardar foco anterior y mover foco al modal
   const previousFocus = document.activeElement;
   closeBtn.focus();
  
-  // Cerrar al hacer clic en overlay (fuera del modal)
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) closeSummaryModal(overlay, previousFocus);
   });
  
-  // Cerrar con botón X
   closeBtn.addEventListener("click", () => closeSummaryModal(overlay, previousFocus));
  
-  // Cerrar con Escape
   function handleKeydown(e) {
     if (e.key === "Escape") {
       closeSummaryModal(overlay, previousFocus);
@@ -381,16 +396,13 @@ function openSummaryModal(data) {
   }
   document.addEventListener("keydown", handleKeydown);
  
-  // Copiar resumen
   copyBtn.addEventListener("click", async () => {
     await copySummary(data);
   });
  
-  // Descargar PDF
   pdfBtn.addEventListener("click", () => downloadSummaryPDF(data));
 }
  
-/* ── Cerrar modal ── */
 function closeSummaryModal(overlay, previousFocus) {
   overlay.classList.remove("is-open");
   overlay.addEventListener(
@@ -403,9 +415,7 @@ function closeSummaryModal(overlay, previousFocus) {
   );
 }
  
-/* ── Descargar PDF ── */
 function downloadSummaryPDF(data) {
-  // 1. Acceder a jsPDF desde el objeto global window
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({
     orientation: 'p',
@@ -413,17 +423,15 @@ function downloadSummaryPDF(data) {
     format: 'a4'
   });
 
-  // 2. Encabezado Institucional de CercaRed
   doc.setFont("helvetica", "bold");
   doc.setFontSize(22);
-  doc.setTextColor(26, 38, 57); // Azul oscuro elegante
+  doc.setTextColor(26, 38, 57); 
   doc.text("RESUMEN DEL SERVICIO - CERCARED", 15, 20);
   
-  doc.setDrawColor(230, 0, 35); // Línea decorativa color rojo tipo Pinterest
+  doc.setDrawColor(230, 0, 35); 
   doc.setLineWidth(1);
   doc.line(15, 24, 195, 24);
 
-  // 3. Título del Servicio y Metadatos
   doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
   doc.setTextColor(230, 0, 35);
@@ -434,10 +442,8 @@ function downloadSummaryPDF(data) {
   doc.setTextColor(100, 100, 100);
   doc.text(`Categoría: ${data.category}  |  Entidad: ${data.shortEntity}  |  Costo: ${data.cost}`, 15, 40);
 
-  // Variable de control vertical (para evitar que se encimen los textos)
   let currentY = 52;
 
-  // --- FUNCIÓN INTERNA AUXILIAR PARA IMPRIMIR SECCIONES Y EVITAR DESBORDES ---
   function agregarSeccion(titulo, elementos, esLista = true) {
     if (!elementos || elementos.length === 0) return;
 
@@ -454,38 +460,30 @@ function downloadSummaryPDF(data) {
     if (Array.isArray(elementos)) {
       elementos.forEach((item, index) => {
         let textoLinea = esLista ? `• ${item.title}` : `${index + 1}. ${item.title}`;
-        
-        // Si son canales, formateamos con su descripción
         if (titulo === "CANALES DE ATENCIÓN") {
           textoLinea = `• ${item.title}: ${item.description}`;
         }
-
         const lineasFragmentadas = doc.splitTextToSize(textoLinea, 175);
         doc.text(lineasFragmentadas, 18, currentY);
         currentY += (lineasFragmentadas.length * 5);
       });
     } else {
-      // Para texto plano largo como la Descripción
       const lineasFragmentadas = doc.splitTextToSize(elementos, 175);
       doc.text(lineasFragmentadas, 15, currentY);
       currentY += (lineasFragmentadas.length * 5);
     }
-    currentY += 6; // Espacio de separación entre bloques de contenido
+    currentY += 6;
   }
 
-  // 4. Inyección del contenido dinámico de CercaRed
   agregarSeccion("DESCRIPCIÓN", data.description, false);
   agregarSeccion("REQUISITOS PRINCIPALES", data.requirements, true);
   agregarSeccion("DOCUMENTOS BÁSICOS", data.documents, true);
-  
-  // Para los Pasos, pasamos 'false' en el tercer parámetro para que use numeración (1, 2, 3...)
   agregarSeccion("PASOS", data.steps, false);
   agregarSeccion("CANALES DE ATENCIÓN", data.channels, true);
 
-  // 5. Enlace Oficial y Cierre del Documento
   if (currentY > 260) {
     doc.addPage();
-    currentY = 20; // Si el contenido es largo, crea otra hoja y reinicia el margen superior
+    currentY = 20;
   }
 
   doc.setFont("helvetica", "bold");
@@ -493,7 +491,6 @@ function downloadSummaryPDF(data) {
   doc.setTextColor(26, 38, 57);
   doc.text(`Canal oficial: ${data.officialUrl}`, 15, currentY + 4);
 
-  // Pie de página fijo al final
   doc.setDrawColor(220, 220, 220);
   doc.line(15, 278, 195, 278);
   doc.setFont("helvetica", "normal");
@@ -501,15 +498,35 @@ function downloadSummaryPDF(data) {
   doc.setTextColor(150, 150, 150);
   doc.text("Generado desde CercaRed · Servicios sociales cerca de ti", 15, 284);
 
-  // 6. Ejecutar la descarga del archivo PDF real
   doc.save(`resumen-${data.id}.pdf`);
-  
-  // Tu feedback visual nativo original
   showDetailToast("Resumen descargado");
 }
 
+// ==========================================================================
+// FASE B: ANALYTICS - FUNCIÓN DE CONTROL DE CLICS (SILENCIOSA)
+// ==========================================================================
+async function trackServiceVisit(serviceData) {
+  if (!serviceData || !serviceData.id) return;
+  try {
+    const metricDocRef = doc(db, "metrics", serviceData.id);
+    await setDoc(metricDocRef, {
+      serviceName: serviceData.name,
+      category: serviceData.category || "Sin categoría",
+      visits: increment(1),
+      lastVisited: new Date().toISOString()
+    }, { merge: true });
+    console.log(`[Métricas] Incrementado conteo para: ${serviceData.name}`);
+  } catch (error) {
+    console.error("Error al registrar la métrica de visita:", error);
+  }
+}
+
+// ==========================================================================
+// FLUJO DE INICIALIZACIÓN DE LA PÁGINA
+// ==========================================================================
 if (service) {
   renderServiceDetail(service);
+  trackServiceVisit(service); // <-- DISPARADOR AUTOMÁTICO SILENCIOSO DE MÉTRICAS
 } else {
   renderNotFound();
 }

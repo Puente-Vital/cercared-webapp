@@ -109,11 +109,14 @@
                   <button type="button" class="btn-toggle" data-value="simple" aria-pressed="false">Simple</button>
                 </div>
               </div>
-            </div>
-
-            <button type="submit" class="btn-accent btn-submit">Guardar preferencias</button>
-          </form>
-        </div>
+            </div> <div style="display: flex; align-items: center; gap: 15px; margin-top: 25px;">
+              <button type="submit" class="btn btn-primary" id="savePreferencesBtn" style="width: auto; padding: 10px 24px; margin: 0;">
+                Guardar preferencias
+              </button>
+              
+              <div id="preferencesSuccessMessage" style="color: var(--color-success, #2e7d32); font-size: 14px; font-weight: 500; visibility: hidden; opacity: 0; transition: opacity 0.3s ease; white-space: nowrap;"></div>
+            </div> </form>
+           </div>
 
         <div class="profile-card">
           <h2 class="card-title">Cambiar contraseña</h2>
@@ -147,6 +150,5 @@
 
   <script src="js/navbar.js"></script>
   <script src="js/footer.js"></script>
-  <script src="js/profile.js"></script>
-</body>
+  <script type="module" src="js/profile.js"></script>
 </html>
