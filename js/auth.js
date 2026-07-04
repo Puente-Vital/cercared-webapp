@@ -1,3 +1,21 @@
+
+window.fbAsyncInit = function() {
+  FB.init({
+    appId      : '1741999303593859', 
+    cookie     : true, 
+    xfbml      : true,      
+    version    : 'v18.0'
+  });
+};
+
+(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) return;
+  js = d.createElement(s); js.id = id;
+  js.src = "https://connect.facebook.net/es_LA/sdk.js";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));
+
 document.addEventListener('DOMContentLoaded', () => {
   const loginView = document.getElementById('loginView');
   const registerView = document.getElementById('registerView');
@@ -268,15 +286,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  const socialButtons = document.querySelectorAll('.btn-social');
-  
-  socialButtons.forEach(button => {
-    button.addEventListener('click', (e) => {
-      e.preventDefault();
-      alert("El inicio de sesión con redes sociales estará disponible en la próxima versión.");
-    });
-  });
-
   const forgotPasswordLink = document.getElementById('forgotPassword');
   const recoveryModal = document.getElementById('recoveryModal');
   const closeModal = document.getElementById('closeModal');
@@ -299,6 +308,39 @@ document.addEventListener('DOMContentLoaded', () => {
   const recPhoneError = document.getElementById('recoveryPhoneError');
   const newPassError = document.getElementById('newPasswordError');
   const maskedPhoneHint = document.getElementById('maskedPhoneHint');
+
+  const btnFacebook = document.getElementById('btnFacebookLogin');
+
+  if (btnFacebook) {
+    btnFacebook.addEventListener('click', (e) => {
+      e.preventDefault();
+      
+      FB.login(function(response) {
+        if (response.authResponse) {
+          FB.api('/me', { fields: 'name, email' }, function(userInfo) {
+            console.log('Datos recibidos de Facebook:', userInfo);
+            
+            const facebookUser = {
+              name: userInfo.name,
+              email: userInfo.email || `${userInfo.id}@facebook.com`, 
+              source: 'facebook'
+            };
+
+            localStorage.setItem('cercared_currentUser', JSON.stringify(facebookUser));
+            
+            if (window.CercaRedNavbar?.updateAuthLink) {
+              window.CercaRedNavbar.updateAuthLink();
+            }
+            
+            alert(`¡Bienvenido/a, ${facebookUser.name}! Has iniciado sesión con Facebook.`);
+            window.location.href = 'index.html';
+          });
+        } else {
+          console.log('El usuario canceló el inicio de sesión o no autorizó la app.');
+        }
+      }, { scope: 'email' }); 
+    });
+  }
 
   let recoveryUser = null; 
 
