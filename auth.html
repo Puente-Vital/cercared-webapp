@@ -33,7 +33,6 @@
   </header>
 
   <div class="auth-wrapper" id="authWrapper">
-    
     <div class="auth-sidebar" id="authSidebar">
   
       <div class="sidebar-content" id="loginSidebar">
@@ -81,16 +80,18 @@
 
     <div class="auth-main">
       <div class="form-container">
-        
+
         <div class="auth-view" id="loginView">
           <h2>Iniciar sesión</h2>
           <p class="view-desc">Accede a tu cuenta de CercaRed</p>
+          
           <form id="loginForm" novalidate>
             <div class="input-group">
               <label for="loginEmail">Correo electrónico</label>
               <input type="email" id="loginEmail" placeholder="correo@email.com" aria-describedby="loginEmailError" />
               <span class="error-message" id="loginEmailError" aria-live="polite"></span>
             </div>
+            
             <div class="input-group">
               <label for="loginPassword">Contraseña</label>
               <div class="password-container">
@@ -99,22 +100,23 @@
               </div>
               <span class="error-message" id="loginPasswordError" aria-live="polite"></span>
             </div>
+            
             <div class="form-link-wrapper">
               <a href="#" id="forgotPassword" class="forgot-password">¿Olvidaste tu contraseña?</a>
             </div>
+            
             <button type="submit" class="btn-primary">Iniciar sesión</button>
+            
+            <div id="successMessage" class="sutil-message hidden">
+              ¡Sesión iniciada correctamente!
+            </div>
           </form>
           <div class="divider"><span>o inicia sesión con</span></div>
           
           <div class="social-buttons">
-            <button type="button" class="btn-social">
+            <button type="button" class="btn-social-full" id="btnGoogleLogin">
               <img src="assets/images/logoGG.png" alt="Google" class="social-icon">
-            </button>
-            <button type="button" class="btn-social">
-              <img src="assets/images/logoFB.png" alt="Facebook" class="social-icon">
-            </button>
-            <button type="button" class="btn-social">
-              <img src="assets/images/LogoAPPLE.png" alt="Apple" class="social-icon">
+              <span>Continuar con Google</span>
             </button>
           </div>
 
@@ -138,12 +140,7 @@
               <input type="email" id="registerEmail" placeholder="Escribe tu correo" aria-describedby="registerEmailError" />
               <span class="error-message" id="registerEmailError" aria-live="polite"></span>
             </div>
-            <div class="input-group">
-              <label for="registerPhone">Número de celular</label>
-              <input type="tel" id="registerPhone" placeholder="Ej. 999123456" maxlength="9" />
-              <span class="error-message" id="registerPhoneError"></span>
-            </div>
-            <div class="input-row">
+<div class="input-row">
               <div class="input-group">
                 <label for="registerPassword">Contraseña</label>
                 <div class="password-container">
@@ -161,32 +158,32 @@
                 <span class="error-message" id="registerConfirmPasswordError" aria-live="polite"></span>
               </div>
             </div>
-            <div class="terms-group">
-              <label class="checkbox-container">
-                <input type="checkbox" id="registerTerms" aria-describedby="registerTermsError" />
-                <span class="custom-checkbox"></span>
-                <span class="terms-text">
-                  Acepto los <a href="#">términos y condiciones</a> y la <a href="#">política de privacidad</a> de CercaRed.
-                </span>
+            
+            <div class="terms-group" style="display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap;">
+              <input type="checkbox" id="registerTerms" style="margin-top: 4px;">
+              <label for="registerTerms" style="flex: 1;">
+                Acepto los 
+                <a href="terms.html" target="_blank" class="legal-link">términos y condiciones</a> 
+                y la 
+                <a href="privacy.html" target="_blank" class="legal-link">política de privacidad</a> 
+                de CercaRed.
               </label>
-              <span class="error-message" id="registerTermsError" aria-live="polite"></span>
+              <span class="error-message" id="registerTermsError" aria-live="polite" style="width: 100%;"></span>
             </div>
+
             <button type="submit" class="btn-secondary">Registrarse</button>
             <button type="button" class="btn-cancel" id="cancelRegister">Cancelar</button>
+            <div id="registerSuccessMessage" class="sutil-message hidden" style="font-size: 1.15rem; font-weight: 600; margin-top: 15px; text-align: center;"></div>          
           </form>
           <div class="divider"><span>o regístrate con</span></div>
           
-          <div class="social-buttons">
-            <button type="button" class="btn-social">
-              <img src="assets/images/logoGG.png" alt="Google" class="social-icon">
-            </button>
-            <button type="button" class="btn-social">
-              <img src="assets/images/logoFB.png" alt="Facebook" class="social-icon">
-            </button>
-            <button type="button" class="btn-social">
-              <img src="assets/images/LogoAPPLE.png" alt="Apple" class="social-icon">
-            </button>
-          </div>
+            <div class="social-buttons">
+              <button type="button" class="btn-social-full" id="btnGoogleLogin2">
+                <img src="assets/images/logoGG.png" alt="Google" class="social-icon">
+                <span>Continuar con Google</span>
+              </button>
+            </div>
+            
 
           <p class="switch-text">¿Ya tienes cuenta? <a href="#" id="toLogin">Iniciar sesión</a></p>
         </div>
@@ -235,10 +232,19 @@
         <button class="btn-primary" id="btnRecoveryStep3">Cambiar contraseña</button>
       </div>
 
-      <div id="recoveryStep4" class="hidden">
-        <h3>¡Contraseña actualizada!</h3>
-        <p>Tu contraseña ha sido cambiada exitosamente. Ya puedes iniciar sesión con tu nueva clave.</p>
-        <button class="btn-primary" id="btnRecoveryFinish">Ir a iniciar sesión</button>
+      <div id="recoveryStep4" class="hidden text-center">
+        <h3 class="text-xl font-bold mb-4" style="color: var(--color-success);">
+          ¡Enlace enviado con éxito!
+        </h3>
+        
+        <p class="text-gray-600 mb-6 text-sm leading-relaxed">
+          Hemos enviado un correo electrónico con las instrucciones para restablecer tu contraseña. 
+          Por favor, revisa tu bandeja de entrada o la carpeta de <strong>correo no deseado (Spam)</strong>.
+        </p>
+        
+        <button id="btnRecoveryFinish">
+          Ir a iniciar sesión
+        </button>
       </div>
 
     </div>
@@ -256,7 +262,7 @@
     </div>
   </footer>
 
-  <script src="js/auth.js"></script>
+  <script type="module" src="js/auth.js"></script>
   <script src="js/navbar.js"></script>
   <script src="js/footer.js"></script>
 </body>
