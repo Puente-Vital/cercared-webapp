@@ -445,11 +445,6 @@
   font-weight: 500;
 }
 
-.channels-section {
-  max-width: 1200px;
-  margin-top: var(--space-7);
-}
-
 .channels-list {
   border-bottom: 1px solid rgba(203, 213, 225, 0.55);
 }
@@ -760,7 +755,7 @@
   padding: 0 var(--space-5);
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 980px) {
   .detail-main {
     width: min(100% - 64px, 1440px);
   }
@@ -814,7 +809,6 @@
   }
 
   .detail-lower,
-  .channels-section,
   .checklist-section,
   .resources-section {
     margin-top: var(--space-5);
