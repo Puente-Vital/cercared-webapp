@@ -48,6 +48,45 @@ function parseSectionItems(value) {
     });
 }
 
+function validateTextField(selector, label, errors) {
+  const field = document.querySelector(selector);
+  const value = field?.value.trim() || "";
+
+  field?.classList.remove("input-error");
+  if (!value) {
+    errors.push(`${label} es obligatorio.`);
+    field?.classList.add("input-error");
+  }
+
+  return value;
+}
+
+function validateSectionField(selector, label, errors) {
+  const field = document.querySelector(selector);
+  const value = field?.value.trim() || "";
+  const lines = value.split("\n").map((line) => line.trim()).filter(Boolean);
+
+  field?.classList.remove("input-error");
+
+  if (lines.length === 0) {
+    errors.push(`${label} debe tener al menos un elemento.`);
+    field?.classList.add("input-error");
+    return [];
+  }
+
+  const hasInvalidLine = lines.some((line) => {
+    const [title, ...descriptionParts] = line.split("|");
+    return !title?.trim() || !descriptionParts.join("|").trim();
+  });
+
+  if (hasInvalidLine) {
+    errors.push(`${label} debe usar el formato: Título | Descripción.`);
+    field?.classList.add("input-error");
+  }
+
+  return parseSectionItems(value);
+}
+
 function isServiceInactive(serviceData) {
   return serviceData.active === false;
 }
@@ -120,13 +159,16 @@ function renderAdminEditor(data) {
   if (!isAdminUser()) return "";
 
   return `
-    <section class="admin-service-editor" id="admin-service-editor" aria-labelledby="admin-editor-title">
+    <section class="admin-service-editor" id="admin-service-editor" aria-labelledby="admin-editor-title" hidden>
       <div class="admin-service-editor-heading">
         <div>
           <p>Administración</p>
           <h2 id="admin-editor-title">Editar contenido del servicio</h2>
         </div>
-        <span>Guardado en Firestore</span>
+        <div class="admin-editor-heading-actions">
+          <span>Guardado en Firestore</span>
+          <button type="button" id="admin-close-editor">Cerrar editor</button>
+        </div>
       </div>
       <form class="admin-service-form" id="admin-service-form">
         <label>
@@ -160,12 +202,33 @@ function renderAdminEditor(data) {
         <p class="admin-editor-help" id="admin-editor-help">
           Escribe cada elemento en una línea usando el formato: Título | Descripción.
         </p>
+        <ul class="admin-validation-list" id="admin-validation-list" hidden></ul>
         <div class="admin-service-form-actions">
           <button type="submit">Guardar cambios</button>
           <button type="button" id="admin-reset-draft">Restablecer formulario</button>
         </div>
         <p class="admin-editor-message" id="admin-editor-message" aria-live="polite"></p>
       </form>
+    </section>
+  `;
+}
+
+function renderAdminPanel(data) {
+  if (!isAdminUser()) return "";
+
+  return `
+    <section class="admin-detail-panel" aria-labelledby="admin-panel-title">
+      <div>
+        <p>Administración</p>
+        <h2 id="admin-panel-title">Gestión del servicio</h2>
+        <span>${isServiceInactive(data) ? "Este servicio está oculto para usuarios." : "Este servicio está publicado en el catálogo."}</span>
+      </div>
+      <div class="admin-detail-panel-actions">
+        <button type="button" id="admin-open-editor">Editar contenido</button>
+        <button class="detail-admin-toggle" type="button">
+          ${isServiceInactive(data) ? "Activar servicio" : "Desactivar servicio"}
+        </button>
+      </div>
     </section>
   `;
 }
@@ -191,6 +254,8 @@ function renderServiceDetail(data) {
           <span aria-hidden="true">→</span>
           <span>${data.name}</span>
         </nav>
+
+        ${renderAdminPanel(data)}
 
         <section class="detail-hero" aria-labelledby="detail-title">
           <h1 id="detail-title">${data.name}</h1>
@@ -287,18 +352,6 @@ function renderServiceDetail(data) {
           <button class="detail-share-button" type="button">Compartir</button>
         </div>
 
-        ${isAdminUser() ? `
-          <section class="sidebar-card admin-detail-card" aria-labelledby="admin-actions-title">
-            <h2 id="admin-actions-title">Administración</h2>
-            <p>${isServiceInactive(data) ? "Este servicio está oculto para usuarios." : "Este servicio está publicado en el catálogo."}</p>
-            <div class="admin-detail-actions">
-              <a href="#admin-service-editor">Editar contenido</a>
-              <button class="detail-admin-toggle" type="button">
-                ${isServiceInactive(data) ? "Activar servicio" : "Desactivar servicio"}
-              </button>
-            </div>
-          </section>
-        ` : ""}
       </aside>
     </div>
   `;
@@ -364,8 +417,38 @@ function wireDetailActions(data) {
   const shareButton = document.querySelector(".detail-share-button");
   const summaryButton = document.querySelector(".summary-button");
   const adminToggleButton = document.querySelector(".detail-admin-toggle");
+  const adminOpenButton = document.querySelector("#admin-open-editor");
+  const adminCloseButton = document.querySelector("#admin-close-editor");
+  const adminEditor = document.querySelector("#admin-service-editor");
   const adminForm = document.querySelector("#admin-service-form");
   const adminResetButton = document.querySelector("#admin-reset-draft");
+  const validationList = document.querySelector("#admin-validation-list");
+
+  function openAdminEditor() {
+    if (!adminEditor) return;
+    adminEditor.hidden = false;
+    adminEditor.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.querySelector("#admin-edit-name")?.focus();
+  }
+
+  function closeAdminEditor() {
+    if (!adminEditor) return;
+    adminEditor.hidden = true;
+    document.querySelector("#admin-open-editor")?.focus();
+  }
+
+  function renderValidationErrors(errors) {
+    if (!validationList) return;
+
+    validationList.replaceChildren(
+      ...errors.map((error) => {
+        const item = document.createElement("li");
+        item.textContent = error;
+        return item;
+      }),
+    );
+    validationList.hidden = errors.length === 0;
+  }
 
   function updateSaveState() {
     const saved = window.CercaRedSaved?.isSaved(savedService) || false;
@@ -397,6 +480,13 @@ function wireDetailActions(data) {
 
   summaryButton.addEventListener("click", () => openSummaryModal(data));
 
+  adminOpenButton?.addEventListener("click", openAdminEditor);
+  adminCloseButton?.addEventListener("click", closeAdminEditor);
+
+  if (window.location.hash === "#admin-service-editor") {
+    window.requestAnimationFrame(openAdminEditor);
+  }
+
   adminToggleButton?.addEventListener("click", () => {
     toggleServiceStatus(data).catch((error) => {
       console.error(error);
@@ -406,15 +496,22 @@ function wireDetailActions(data) {
 
   adminForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const errors = [];
     const updates = {
-      name: document.querySelector("#admin-edit-name").value.trim() || data.name,
-      description: document.querySelector("#admin-edit-description").value.trim() || data.description,
-      shortDescription: document.querySelector("#admin-edit-short-description").value.trim() || data.shortDescription,
-      requirements: parseSectionItems(document.querySelector("#admin-edit-requirements").value),
-      documents: parseSectionItems(document.querySelector("#admin-edit-documents").value),
-      steps: parseSectionItems(document.querySelector("#admin-edit-steps").value),
-      channels: parseSectionItems(document.querySelector("#admin-edit-channels").value),
+      name: validateTextField("#admin-edit-name", "Título", errors),
+      description: validateTextField("#admin-edit-description", "Descripción principal", errors),
+      shortDescription: validateTextField("#admin-edit-short-description", "Descripción corta", errors),
+      requirements: validateSectionField("#admin-edit-requirements", "Requisitos", errors),
+      documents: validateSectionField("#admin-edit-documents", "Documentos", errors),
+      steps: validateSectionField("#admin-edit-steps", "Pasos", errors),
+      channels: validateSectionField("#admin-edit-channels", "Canales de atención", errors),
     };
+
+    renderValidationErrors(errors);
+    if (errors.length > 0) {
+      showDetailToast("Revisa los campos marcados");
+      return;
+    }
 
     try {
       await updateService(data.id, updates);
@@ -429,9 +526,13 @@ function wireDetailActions(data) {
   });
 
   adminResetButton?.addEventListener("click", () => {
+    renderValidationErrors([]);
+    document.querySelectorAll(".admin-service-form .input-error").forEach((field) => {
+      field.classList.remove("input-error");
+    });
     showDetailToast("Formulario restablecido");
     renderServiceDetail(data);
-    document.querySelector("#admin-service-editor")?.scrollIntoView({ behavior: "smooth" });
+    window.requestAnimationFrame(openAdminEditor);
   });
 }
 
