@@ -341,6 +341,48 @@
   background: var(--color-primary);
 }
 
+.admin-detail-card p {
+  margin: 0 0 var(--space-3);
+  color: var(--color-muted);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.admin-detail-actions {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.admin-detail-actions a,
+.admin-detail-actions button {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-accent);
+  border-radius: 8px;
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-detail-actions button {
+  color: var(--color-accent);
+  background: var(--color-surface);
+}
+
+.admin-detail-actions a:hover,
+.admin-detail-actions a:focus-visible {
+  background: var(--color-accent-hover);
+}
+
+.admin-detail-actions button:hover,
+.admin-detail-actions button:focus-visible {
+  background: #fff7ed;
+}
+
 .detail-empty {
   max-width: 640px;
 }

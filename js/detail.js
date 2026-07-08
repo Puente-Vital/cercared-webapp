@@ -21,6 +21,46 @@ const detailRoot = document.querySelector("#service-detail");
 const params = new URLSearchParams(window.location.search);
 const serviceId = params.get("id") || "pension-65";
 const service = (window.CercaRedServices || []).find((item) => item.id === serviceId);
+const INACTIVE_SERVICES_KEY = "cercared_inactive_services";
+
+function getCurrentUser() {
+  try {
+    return JSON.parse(localStorage.getItem("cercared_currentUser") || "null");
+  } catch {
+    return null;
+  }
+}
+
+function isAdminUser() {
+  return getCurrentUser()?.role === "admin";
+}
+
+function getInactiveServiceIds() {
+  try {
+    return JSON.parse(localStorage.getItem(INACTIVE_SERVICES_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function setInactiveServiceIds(ids) {
+  localStorage.setItem(INACTIVE_SERVICES_KEY, JSON.stringify([...new Set(ids)]));
+}
+
+function isServiceInactive(serviceData) {
+  return getInactiveServiceIds().includes(serviceData.id);
+}
+
+function toggleServiceStatus(serviceData) {
+  const inactiveIds = getInactiveServiceIds();
+  const nextIds = inactiveIds.includes(serviceData.id)
+    ? inactiveIds.filter((id) => id !== serviceData.id)
+    : [...inactiveIds, serviceData.id];
+
+  setInactiveServiceIds(nextIds);
+  showDetailToast(nextIds.includes(serviceData.id) ? "Servicio desactivado" : "Servicio activado");
+  renderServiceDetail(serviceData);
+}
 
 // ==========================================================================
 // FUNCIONES DE RENDERIZADO DEL COMPONENTE DETALLE
@@ -192,6 +232,19 @@ function renderServiceDetail(data) {
           <button class="detail-save-button" type="button" aria-pressed="false">Guardar</button>
           <button class="detail-share-button" type="button">Compartir</button>
         </div>
+
+        ${isAdminUser() ? `
+          <section class="sidebar-card admin-detail-card" aria-labelledby="admin-actions-title">
+            <h2 id="admin-actions-title">Administración</h2>
+            <p>${isServiceInactive(data) ? "Este servicio está oculto para usuarios." : "Este servicio está publicado en el catálogo."}</p>
+            <div class="admin-detail-actions">
+              <a href="admin.html?service=${data.id}">Editar contenido</a>
+              <button class="detail-admin-toggle" type="button">
+                ${isServiceInactive(data) ? "Activar servicio" : "Desactivar servicio"}
+              </button>
+            </div>
+          </section>
+        ` : ""}
       </aside>
     </div>
   `;
@@ -256,6 +309,7 @@ function wireDetailActions(data) {
   const saveButton = document.querySelector(".detail-save-button");
   const shareButton = document.querySelector(".detail-share-button");
   const summaryButton = document.querySelector(".summary-button");
+  const adminToggleButton = document.querySelector(".detail-admin-toggle");
 
   function updateSaveState() {
     const saved = window.CercaRedSaved?.isSaved(savedService) || false;
@@ -286,6 +340,10 @@ function wireDetailActions(data) {
   });
 
   summaryButton.addEventListener("click", () => openSummaryModal(data));
+
+  adminToggleButton?.addEventListener("click", () => {
+    toggleServiceStatus(data);
+  });
 }
 
 function buildSummaryModal(data) {
@@ -524,7 +582,7 @@ async function trackServiceVisit(serviceData) {
 // ==========================================================================
 // FLUJO DE INICIALIZACIÓN DE LA PÁGINA
 // ==========================================================================
-if (service) {
+if (service && (isAdminUser() || !isServiceInactive(service))) {
   renderServiceDetail(service);
   trackServiceVisit(service); // <-- DISPARADOR AUTOMÁTICO SILENCIOSO DE MÉTRICAS
 } else {
