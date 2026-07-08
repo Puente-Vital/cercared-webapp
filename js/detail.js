@@ -20,8 +20,11 @@ const db = getFirestore(app);
 const detailRoot = document.querySelector("#service-detail");
 const params = new URLSearchParams(window.location.search);
 const serviceId = params.get("id") || "pension-65";
-const service = (window.CercaRedServices || []).find((item) => item.id === serviceId);
 const INACTIVE_SERVICES_KEY = "cercared_inactive_services";
+const SERVICE_DRAFTS_KEY = "cercared_admin_service_drafts";
+const CREATED_SERVICES_KEY = "cercared_admin_created_services";
+const rawService = getAllServices().find((item) => item.id === serviceId);
+const service = rawService ? applyServiceDraft(rawService) : null;
 
 function getCurrentUser() {
   try {
@@ -45,6 +48,90 @@ function getInactiveServiceIds() {
 
 function setInactiveServiceIds(ids) {
   localStorage.setItem(INACTIVE_SERVICES_KEY, JSON.stringify([...new Set(ids)]));
+}
+
+function readJson(key, fallback) {
+  try {
+    return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJson(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function getCreatedServices() {
+  return readJson(CREATED_SERVICES_KEY, []);
+}
+
+function getAllServices() {
+  return [...(window.CercaRedServices || []), ...getCreatedServices()];
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function getServiceDrafts() {
+  return readJson(SERVICE_DRAFTS_KEY, {});
+}
+
+function getServiceDraft(serviceData) {
+  return getServiceDrafts()[serviceData.id] || {};
+}
+
+function applyServiceDraft(serviceData) {
+  const draft = getServiceDraft(serviceData);
+  return {
+    ...serviceData,
+    ...draft,
+    requirements: draft.requirements || serviceData.requirements,
+    documents: draft.documents || serviceData.documents,
+    steps: draft.steps || serviceData.steps,
+    channels: draft.channels || serviceData.channels,
+  };
+}
+
+function formatSectionItems(items) {
+  return (items || [])
+    .map((item) => `${item.title || ""} | ${item.description || ""}`)
+    .join("\n");
+}
+
+function parseSectionItems(value) {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [title, ...descriptionParts] = line.split("|");
+      return {
+        title: title.trim(),
+        description: descriptionParts.join("|").trim() || "Por verificar",
+      };
+    });
+}
+
+function saveServiceDraft(serviceData, draft) {
+  const drafts = getServiceDrafts();
+  drafts[serviceData.id] = {
+    ...draft,
+    updatedAt: new Date().toISOString(),
+  };
+  writeJson(SERVICE_DRAFTS_KEY, drafts);
+}
+
+function resetServiceDraft(serviceData) {
+  const drafts = getServiceDrafts();
+  delete drafts[serviceData.id];
+  writeJson(SERVICE_DRAFTS_KEY, drafts);
 }
 
 function isServiceInactive(serviceData) {
@@ -118,6 +205,60 @@ function renderProcedures(items) {
     .join("");
 }
 
+function renderAdminEditor(data) {
+  if (!isAdminUser()) return "";
+
+  return `
+    <section class="admin-service-editor" id="admin-service-editor" aria-labelledby="admin-editor-title">
+      <div class="admin-service-editor-heading">
+        <div>
+          <p>Administración</p>
+          <h2 id="admin-editor-title">Editar contenido del servicio</h2>
+        </div>
+        <span>${getServiceDraft(data).updatedAt ? "Borrador local guardado" : "Sin borrador"}</span>
+      </div>
+      <form class="admin-service-form" id="admin-service-form">
+        <label>
+          Título
+          <input id="admin-edit-name" type="text" value="${escapeHtml(data.name)}" />
+        </label>
+        <label>
+          Descripción principal
+          <textarea id="admin-edit-description">${escapeHtml(data.description)}</textarea>
+        </label>
+        <label>
+          Descripción corta para catálogo
+          <textarea id="admin-edit-short-description">${escapeHtml(data.shortDescription)}</textarea>
+        </label>
+        <label>
+          Requisitos
+          <textarea id="admin-edit-requirements" aria-describedby="admin-editor-help">${escapeHtml(formatSectionItems(data.requirements))}</textarea>
+        </label>
+        <label>
+          Documentos
+          <textarea id="admin-edit-documents">${escapeHtml(formatSectionItems(data.documents))}</textarea>
+        </label>
+        <label>
+          Pasos
+          <textarea id="admin-edit-steps">${escapeHtml(formatSectionItems(data.steps))}</textarea>
+        </label>
+        <label>
+          Canales de atención
+          <textarea id="admin-edit-channels">${escapeHtml(formatSectionItems(data.channels))}</textarea>
+        </label>
+        <p class="admin-editor-help" id="admin-editor-help">
+          Escribe cada elemento en una línea usando el formato: Título | Descripción.
+        </p>
+        <div class="admin-service-form-actions">
+          <button type="submit">Guardar borrador</button>
+          <button type="button" id="admin-reset-draft">Restablecer original</button>
+        </div>
+        <p class="admin-editor-message" id="admin-editor-message" aria-live="polite"></p>
+      </form>
+    </section>
+  `;
+}
+
 function renderNotFound() {
   detailRoot.innerHTML = `
     <section class="detail-empty" aria-labelledby="detail-empty-title">
@@ -144,6 +285,8 @@ function renderServiceDetail(data) {
           <h1 id="detail-title">${data.name}</h1>
           <p>${data.description}</p>
         </section>
+
+        ${renderAdminEditor(data)}
 
         <div class="detail-columns">
           <section aria-labelledby="requirements-title">
@@ -238,7 +381,7 @@ function renderServiceDetail(data) {
             <h2 id="admin-actions-title">Administración</h2>
             <p>${isServiceInactive(data) ? "Este servicio está oculto para usuarios." : "Este servicio está publicado en el catálogo."}</p>
             <div class="admin-detail-actions">
-              <a href="admin.html?service=${data.id}">Editar contenido</a>
+              <a href="#admin-service-editor">Editar contenido</a>
               <button class="detail-admin-toggle" type="button">
                 ${isServiceInactive(data) ? "Activar servicio" : "Desactivar servicio"}
               </button>
@@ -310,6 +453,8 @@ function wireDetailActions(data) {
   const shareButton = document.querySelector(".detail-share-button");
   const summaryButton = document.querySelector(".summary-button");
   const adminToggleButton = document.querySelector(".detail-admin-toggle");
+  const adminForm = document.querySelector("#admin-service-form");
+  const adminResetButton = document.querySelector("#admin-reset-draft");
 
   function updateSaveState() {
     const saved = window.CercaRedSaved?.isSaved(savedService) || false;
@@ -343,6 +488,31 @@ function wireDetailActions(data) {
 
   adminToggleButton?.addEventListener("click", () => {
     toggleServiceStatus(data);
+  });
+
+  adminForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const draft = {
+      name: document.querySelector("#admin-edit-name").value.trim() || data.name,
+      description: document.querySelector("#admin-edit-description").value.trim() || data.description,
+      shortDescription: document.querySelector("#admin-edit-short-description").value.trim() || data.shortDescription,
+      requirements: parseSectionItems(document.querySelector("#admin-edit-requirements").value),
+      documents: parseSectionItems(document.querySelector("#admin-edit-documents").value),
+      steps: parseSectionItems(document.querySelector("#admin-edit-steps").value),
+      channels: parseSectionItems(document.querySelector("#admin-edit-channels").value),
+    };
+
+    saveServiceDraft(data, draft);
+    showDetailToast("Borrador guardado");
+    renderServiceDetail(applyServiceDraft(rawService));
+    document.querySelector("#admin-service-editor")?.scrollIntoView({ behavior: "smooth" });
+  });
+
+  adminResetButton?.addEventListener("click", () => {
+    resetServiceDraft(data);
+    showDetailToast("Contenido original restablecido");
+    renderServiceDetail(rawService);
+    document.querySelector("#admin-service-editor")?.scrollIntoView({ behavior: "smooth" });
   });
 }
 

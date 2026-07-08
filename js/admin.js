@@ -16,11 +16,42 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const root = document.querySelector("#admin-root");
-const services = window.CercaRedServices || [];
+const serviceDraftsKey = "cercared_admin_service_drafts";
+const createdServicesKey = "cercared_admin_created_services";
+const services = getAllServices().map(applyInitialDraft);
 const inactiveKey = "cercared_inactive_services";
-const draftKey = "cercared_admin_service_drafts";
 let metricsByService = {};
-let selectedServiceId = new URLSearchParams(window.location.search).get("service") || services[0]?.id;
+let searchQuery = "";
+let statusFilter = "all";
+let sortMode = "visits-desc";
+
+function readInitialDrafts() {
+  try {
+    return JSON.parse(localStorage.getItem(serviceDraftsKey) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function applyInitialDraft(service) {
+  const draft = readInitialDrafts()[service.id] || {};
+  return {
+    ...service,
+    ...draft,
+    requirements: draft.requirements || service.requirements,
+    documents: draft.documents || service.documents,
+    steps: draft.steps || service.steps,
+    channels: draft.channels || service.channels,
+  };
+}
+
+function getCreatedServices() {
+  return readJson(createdServicesKey, []);
+}
+
+function getAllServices() {
+  return [...(window.CercaRedServices || []), ...getCreatedServices()];
+}
 
 function readJson(key, fallback) {
   try {
@@ -59,19 +90,6 @@ function setInactive(serviceId, nextInactive) {
 
   writeJson(inactiveKey, [...new Set(nextIds)]);
   renderDashboard();
-}
-
-function getDrafts() {
-  return readJson(draftKey, {});
-}
-
-function saveDraft(serviceId, draft) {
-  const drafts = getDrafts();
-  drafts[serviceId] = {
-    ...draft,
-    updatedAt: new Date().toISOString()
-  };
-  writeJson(draftKey, drafts);
 }
 
 function showState(title, message, action = "") {
@@ -116,10 +134,6 @@ async function loadMetrics() {
   }
 }
 
-function getSelectedService() {
-  return services.find((service) => service.id === selectedServiceId) || services[0];
-}
-
 function renderStats() {
   const inactiveCount = getInactiveIds().length;
   const activeCount = services.length - inactiveCount;
@@ -155,10 +169,83 @@ function renderStats() {
   `;
 }
 
-function renderServiceRows() {
+function getVisits(serviceId) {
+  return Number(metricsByService[serviceId]?.visits || 0);
+}
+
+function normalizeText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function getVisibleServices() {
+  const normalizedQuery = normalizeText(searchQuery);
+
   return services
+    .filter((service) => {
+      const inactive = isInactive(service.id);
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && !inactive) ||
+        (statusFilter === "inactive" && inactive);
+      const searchableContent = normalizeText(`${service.name} ${service.entity} ${service.category}`);
+      const matchesQuery = !normalizedQuery || searchableContent.includes(normalizedQuery);
+
+      return matchesStatus && matchesQuery;
+    })
+    .sort((a, b) => {
+      if (sortMode === "visits-asc") return getVisits(a.id) - getVisits(b.id);
+      if (sortMode === "name-asc") return a.name.localeCompare(b.name, "es");
+      if (sortMode === "name-desc") return b.name.localeCompare(a.name, "es");
+      return getVisits(b.id) - getVisits(a.id);
+    });
+}
+
+function renderToolbar() {
+  return `
+    <div class="admin-toolbar" aria-label="Filtros de servicios publicados">
+      <label>
+        Buscar
+        <input id="admin-search" type="search" value="${escapeHtml(searchQuery)}" placeholder="Buscar por servicio, entidad o categoría" />
+      </label>
+      <label>
+        Estado
+        <select id="admin-status-filter">
+          <option value="all" ${statusFilter === "all" ? "selected" : ""}>Todos</option>
+          <option value="active" ${statusFilter === "active" ? "selected" : ""}>Activos</option>
+          <option value="inactive" ${statusFilter === "inactive" ? "selected" : ""}>Inactivos</option>
+        </select>
+      </label>
+      <label>
+        Ordenar
+        <select id="admin-sort">
+          <option value="visits-desc" ${sortMode === "visits-desc" ? "selected" : ""}>Más visitados</option>
+          <option value="visits-asc" ${sortMode === "visits-asc" ? "selected" : ""}>Menos visitados</option>
+          <option value="name-asc" ${sortMode === "name-asc" ? "selected" : ""}>Nombre A-Z</option>
+          <option value="name-desc" ${sortMode === "name-desc" ? "selected" : ""}>Nombre Z-A</option>
+        </select>
+      </label>
+    </div>
+  `;
+}
+
+function renderServiceRows() {
+  const visibleServices = getVisibleServices();
+
+  if (visibleServices.length === 0) {
+    return `
+      <tr>
+        <td colspan="5">No hay servicios que coincidan con los filtros.</td>
+      </tr>
+    `;
+  }
+
+  return visibleServices
     .map((service) => {
-      const visits = metricsByService[service.id]?.visits || 0;
+      const visits = getVisits(service.id);
       const inactive = isInactive(service.id);
 
       return `
@@ -176,7 +263,7 @@ function renderServiceRows() {
           </td>
           <td>
             <div class="admin-row-actions">
-              <button type="button" data-admin-edit="${escapeHtml(service.id)}">Editar</button>
+              <a href="detail.html?id=${encodeURIComponent(service.id)}#admin-service-editor">Editar</a>
               <button type="button" data-admin-toggle="${escapeHtml(service.id)}">
                 ${inactive ? "Activar" : "Desactivar"}
               </button>
@@ -188,182 +275,68 @@ function renderServiceRows() {
     .join("");
 }
 
-function renderEditor(service) {
-  const drafts = getDrafts();
-  const draft = drafts[service.id] || {};
-
-  return `
-    <section class="admin-card" aria-labelledby="admin-editor-title">
-      <h2 id="admin-editor-title">Editar servicio</h2>
-      <p class="admin-form-help">
-        Por ahora se guarda como borrador local para revisión. Cuando se migre servicios a Firestore, este formulario podrá persistir cambios globales.
-      </p>
-      <form class="admin-form" id="admin-edit-form">
-        <label>
-          Servicio
-          <select id="admin-service-select">
-            ${services.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === service.id ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}
-          </select>
-        </label>
-        <label>
-          Nombre
-          <input id="admin-service-name" type="text" value="${escapeHtml(draft.name || service.name)}" />
-        </label>
-        <label>
-          Descripción corta
-          <textarea id="admin-service-description">${escapeHtml(draft.shortDescription || service.shortDescription)}</textarea>
-        </label>
-        <label>
-          Estado
-          <select id="admin-service-status">
-            <option value="active" ${isInactive(service.id) ? "" : "selected"}>Activo</option>
-            <option value="inactive" ${isInactive(service.id) ? "selected" : ""}>Inactivo</option>
-          </select>
-        </label>
-        <div class="admin-form-actions">
-          <button type="submit">Guardar borrador</button>
-          <a class="admin-secondary-link" href="detail.html?id=${encodeURIComponent(service.id)}">Ver detalle</a>
-        </div>
-        <p class="admin-message" id="admin-edit-message" aria-live="polite"></p>
-      </form>
-    </section>
-  `;
-}
-
-function renderAiPanel() {
-  return `
-    <section class="admin-card admin-ai" aria-labelledby="admin-ai-title">
-      <h2 id="admin-ai-title">Generar borrador con IA</h2>
-      <form class="admin-form" id="admin-ai-form">
-        <label>
-          Fuentes o notas oficiales
-          <textarea id="admin-ai-sources" placeholder="Pega enlaces oficiales, requisitos, costos, pasos o texto verificado del servicio."></textarea>
-        </label>
-        <button class="is-primary" type="button" id="admin-ai-button">Generar borrador</button>
-        <label>
-          Resultado
-          <textarea class="admin-ai-output" id="admin-ai-output" readonly></textarea>
-        </label>
-        <p class="admin-message" id="admin-ai-message" aria-live="polite"></p>
-      </form>
-    </section>
-  `;
-}
-
 function renderDashboard() {
-  const selectedService = getSelectedService();
-
   root.innerHTML = `
     <section class="admin-hero" aria-labelledby="admin-title">
       <div>
         <p class="admin-eyebrow">Panel administrativo</p>
         <h1 id="admin-title">Gestión de servicios</h1>
-        <p>Revisa métricas, controla visibilidad y prepara borradores de cambios para el catálogo.</p>
+        <p>Revisa métricas, filtra servicios y controla la visibilidad del catálogo.</p>
       </div>
       <a class="admin-primary-link" href="index.html">Volver al catálogo</a>
     </section>
 
     ${renderStats()}
 
-    <div class="admin-layout">
-      <section class="admin-card" aria-labelledby="admin-services-title">
-        <h2 id="admin-services-title">Servicios publicados</h2>
-        <p>Las visitas vienen de Firestore cuando se abre cada detalle de servicio.</p>
-        <div class="admin-table-wrap">
-          <table class="admin-table">
-            <thead>
-              <tr>
-                <th>Servicio</th>
-                <th>Categoría</th>
-                <th>Visitas</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>${renderServiceRows()}</tbody>
-          </table>
+    <section class="admin-card" aria-labelledby="admin-services-title">
+      <div class="admin-card-heading">
+        <div>
+          <h2 id="admin-services-title">Servicios publicados</h2>
+          <p>Las visitas vienen de Firestore cuando se abre cada detalle de servicio.</p>
         </div>
-      </section>
-
-      <div>
-        ${renderEditor(selectedService)}
-        ${renderAiPanel()}
       </div>
-    </div>
+      ${renderToolbar()}
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Servicio</th>
+              <th>Categoría</th>
+              <th>Visitas</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>${renderServiceRows()}</tbody>
+        </table>
+      </div>
+    </section>
   `;
 
   wireAdminActions();
 }
 
 function wireAdminActions() {
-  root.querySelectorAll("[data-admin-edit]").forEach((button) => {
-    button.addEventListener("click", () => {
-      selectedServiceId = button.dataset.adminEdit;
-      renderDashboard();
-    });
-  });
-
   root.querySelectorAll("[data-admin-toggle]").forEach((button) => {
     button.addEventListener("click", () => {
       setInactive(button.dataset.adminToggle, !isInactive(button.dataset.adminToggle));
     });
   });
 
-  root.querySelector("#admin-service-select")?.addEventListener("change", (event) => {
-    selectedServiceId = event.target.value;
+  root.querySelector("#admin-search")?.addEventListener("input", (event) => {
+    searchQuery = event.target.value;
     renderDashboard();
   });
 
-  root.querySelector("#admin-edit-form")?.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const service = getSelectedService();
-    const status = root.querySelector("#admin-service-status").value;
-    saveDraft(service.id, {
-      name: root.querySelector("#admin-service-name").value.trim(),
-      shortDescription: root.querySelector("#admin-service-description").value.trim(),
-      status
-    });
-    setInactive(service.id, status === "inactive");
-    root.querySelector("#admin-edit-message").textContent = "Borrador guardado.";
+  root.querySelector("#admin-status-filter")?.addEventListener("change", (event) => {
+    statusFilter = event.target.value;
+    renderDashboard();
   });
 
-  root.querySelector("#admin-ai-button")?.addEventListener("click", generateAiDraft);
-}
-
-async function generateAiDraft() {
-  const sourcesField = root.querySelector("#admin-ai-sources");
-  const outputField = root.querySelector("#admin-ai-output");
-  const message = root.querySelector("#admin-ai-message");
-  const service = getSelectedService();
-  const sources = sourcesField.value.trim();
-
-  if (!sources) {
-    message.textContent = "Pega primero fuentes o notas oficiales.";
-    return;
-  }
-
-  message.textContent = "Generando borrador...";
-  outputField.value = "";
-
-  try {
-    const response = await fetch("/api/generate-service-draft", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        serviceName: service.name,
-        sources
-      })
-    });
-
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || "No se pudo generar el borrador.");
-
-    outputField.value = payload.draft;
-    message.textContent = "Borrador generado. Revísalo antes de usarlo.";
-  } catch (error) {
-    outputField.value = "";
-    message.textContent = error.message;
-  }
+  root.querySelector("#admin-sort")?.addEventListener("change", (event) => {
+    sortMode = event.target.value;
+    renderDashboard();
+  });
 }
 
 onAuthStateChanged(auth, async (user) => {

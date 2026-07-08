@@ -11,10 +11,10 @@ export default async function handler(request, response) {
     });
   }
 
-  const { serviceName, sources } = request.body || {};
-  if (!serviceName || !sources) {
+  const { sources } = request.body || {};
+  if (!sources || typeof sources !== "string") {
     return response.status(400).json({
-      error: "Se requiere serviceName y sources."
+      error: "Pega fuentes oficiales o notas verificadas para generar el servicio."
     });
   }
 
@@ -33,7 +33,12 @@ export default async function handler(request, response) {
             content: [
               {
                 type: "input_text",
-                text: "Eres un asistente para administradores de CercaRed. Genera borradores de servicios sociales en espanol claro, basados solo en fuentes provistas. Si falta un dato, marca 'Por verificar'. No inventes requisitos, costos ni canales."
+                text: [
+                  "Eres un asistente para administradores de CercaRed.",
+                  "Crea un borrador de servicio social basado solo en las fuentes entregadas.",
+                  "No inventes requisitos, costos, canales ni enlaces. Si falta un dato, escribe 'Por verificar'.",
+                  "Responde solo JSON valido, sin markdown."
+                ].join(" ")
               }
             ]
           },
@@ -42,7 +47,29 @@ export default async function handler(request, response) {
             content: [
               {
                 type: "input_text",
-                text: `Servicio: ${serviceName}\n\nFuentes o notas oficiales:\n${sources}\n\nDevuelve un borrador con: descripcion, entidad, requisitos, documentos, pasos, canales, costo, alcance y advertencias de verificacion.`
+                text: [
+                  "Genera un JSON con esta forma exacta:",
+                  "{",
+                  "\"name\":\"\",",
+                  "\"entity\":\"\",",
+                  "\"category\":\"Social|Salud|Educación|Vivienda|Adulto mayor\",",
+                  "\"description\":\"\",",
+                  "\"shortDescription\":\"\",",
+                  "\"district\":\"Nacional\",",
+                  "\"modality\":\"Presencial|Virtual|Mixta\",",
+                  "\"attention\":\"\",",
+                  "\"scope\":\"\",",
+                  "\"cost\":\"\",",
+                  "\"officialUrl\":\"\",",
+                  "\"requirements\":[{\"title\":\"\",\"description\":\"\"}],",
+                  "\"documents\":[{\"title\":\"\",\"description\":\"\"}],",
+                  "\"steps\":[{\"title\":\"\",\"description\":\"\"}],",
+                  "\"channels\":[{\"title\":\"\",\"description\":\"\"}]",
+                  "}",
+                  "",
+                  "Fuentes o notas:",
+                  sources
+                ].join("\n")
               }
             ]
           }
@@ -57,17 +84,19 @@ export default async function handler(request, response) {
       });
     }
 
-    const draft = payload.output_text
+    const text = payload.output_text
       || payload.output?.flatMap((item) => item.content || [])
         .map((content) => content.text)
         .filter(Boolean)
         .join("\n")
       || "";
+    const jsonText = text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+    const service = JSON.parse(jsonText);
 
-    return response.status(200).json({ draft });
+    return response.status(200).json({ service });
   } catch (error) {
     return response.status(500).json({
-      error: "Error interno al generar el borrador."
+      error: "No se pudo convertir la respuesta de IA en un servicio editable."
     });
   }
 }
