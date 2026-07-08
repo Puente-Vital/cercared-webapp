@@ -37,12 +37,50 @@ window.addEventListener("resize", () => {
   }
 });
 
+function getCurrentUser() {
+  try {
+    return JSON.parse(localStorage.getItem('cercared_currentUser') || 'null');
+  } catch {
+    return null;
+  }
+}
+
+function isAdminUser() {
+  return getCurrentUser()?.role === 'admin';
+}
+
+function syncAdminLink() {
+  const navMenuElement = document.getElementById('nav-menu');
+  if (!navMenuElement) return;
+
+  let adminLink = navMenuElement.querySelector('a[href="admin.html"]');
+
+  if (!isAdminUser()) {
+    adminLink?.remove();
+    return;
+  }
+
+  if (!adminLink) {
+    adminLink = document.createElement('a');
+    adminLink.href = 'admin.html';
+    adminLink.textContent = 'Admin';
+    adminLink.addEventListener("click", closeMenu);
+    navMenuElement.insertBefore(adminLink, navMenuElement.lastElementChild);
+  }
+
+  const isAdminPage = window.location.pathname.endsWith('/admin.html');
+  adminLink.classList.toggle('is-active', isAdminPage);
+  if (isAdminPage) adminLink.setAttribute('aria-current', 'page');
+  else adminLink.removeAttribute('aria-current');
+}
+
+// 🚀 LA FUNCIÓN ORIGINAL CORREGIDA: Sincroniza al instante usando localStorage
 function updateAuthLink() {
   const currentUserStr = localStorage.getItem('cercared_currentUser');
-  const navMenu = document.getElementById('nav-menu');
-  if (!navMenu) return;
+  const navMenuElement = document.getElementById('nav-menu');
+  if (!navMenuElement) return;
 
-  const authLink = navMenu.querySelector('a[href="auth.html"], a[href="profile.html"]');
+  const authLink = navMenuElement.querySelector('a[href="auth.html"], a[href="profile.html"]');
   if (!authLink) return;
 
   if (currentUserStr) {
@@ -51,6 +89,7 @@ function updateAuthLink() {
     authLink.classList.toggle('is-active', window.location.pathname.endsWith('/profile.html'));
     if (window.location.pathname.endsWith('/profile.html')) authLink.setAttribute('aria-current', 'page');
     else authLink.removeAttribute('aria-current');
+    syncAdminLink();
     return;
   }
 
@@ -59,9 +98,12 @@ function updateAuthLink() {
   authLink.classList.toggle('is-active', window.location.pathname.endsWith('/auth.html'));
   if (window.location.pathname.endsWith('/auth.html')) authLink.setAttribute('aria-current', 'page');
   else authLink.removeAttribute('aria-current');
+  syncAdminLink();
 }
 
+// 🚀 AQUÍ ESTÁ LA CLAVE: Hacerla global explícitamente para que auth.js la encuentre
 window.CercaRedNavbar = { updateAuthLink };
 
+// Ejecutar inmediatamente al cargar el documento
 document.addEventListener('DOMContentLoaded', updateAuthLink);
 window.addEventListener('storage', updateAuthLink);
