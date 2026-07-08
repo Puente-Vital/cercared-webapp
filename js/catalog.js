@@ -129,8 +129,34 @@ function parseSectionItems(value) {
     });
 }
 
+function parseResourceItems(value) {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [title, description = "", url = "", type = "otro"] = line
+        .split("|")
+        .map((part) => part.trim());
+      return {
+        title,
+        description: description || "Recurso oficial relacionado al servicio.",
+        url,
+        type: type || "otro",
+      };
+    });
+}
+
 function formatSectionItems(items = []) {
   return items.map((item) => `${item.title || ""} | ${item.description || ""}`).join("\n");
+}
+
+function formatResourceItems(items = []) {
+  return items
+    .map((item) =>
+      `${item.title || ""} | ${item.description || ""} | ${item.url || ""} | ${item.type || "otro"}`,
+    )
+    .join("\n");
 }
 
 function setFieldError(selector, hasError) {
@@ -161,6 +187,34 @@ function validateSectionTextarea(selector, label, errors) {
   }
 
   return parseSectionItems(value);
+}
+
+function validateResourceTextarea(selector, label, errors) {
+  const field = document.querySelector(selector);
+  const value = field?.value.trim() || "";
+  const lines = value.split("\n").map((line) => line.trim()).filter(Boolean);
+
+  setFieldError(selector, false);
+  if (lines.length === 0) return [];
+
+  const hasInvalidLine = lines.some((line) => {
+    const [title, , url] = line.split("|").map((part) => part.trim());
+    if (!title || !url) return true;
+
+    try {
+      const resourceUrl = new URL(url);
+      return !["http:", "https:"].includes(resourceUrl.protocol);
+    } catch {
+      return true;
+    }
+  });
+
+  if (hasInvalidLine) {
+    errors.push(`${label}: usa el formato Título | Descripción | URL | Tipo con enlaces válidos.`);
+    setFieldError(selector, true);
+  }
+
+  return parseResourceItems(value);
 }
 
 function validateRequiredField(selector, label, errors) {
@@ -231,6 +285,8 @@ function createServiceFromForm() {
   const documents = validateSectionTextarea("#admin-ai-documents", "Documentos", errors);
   const steps = validateSectionTextarea("#admin-ai-steps", "Pasos", errors);
   const channels = validateSectionTextarea("#admin-ai-channels", "Canales", errors);
+  const resources = validateResourceTextarea("#admin-ai-resources", "Recursos útiles", errors);
+  const checklist = validateSectionTextarea("#admin-ai-checklist", "Checklist", errors);
 
   renderAiValidation(errors);
   if (errors.length > 0) {
@@ -263,6 +319,8 @@ function createServiceFromForm() {
       },
     ],
     channels,
+    resources,
+    checklist,
   };
 }
 
@@ -282,6 +340,8 @@ function fillAiServiceForm(service) {
   document.querySelector("#admin-ai-documents").value = formatSectionItems(service.documents);
   document.querySelector("#admin-ai-steps").value = formatSectionItems(service.steps);
   document.querySelector("#admin-ai-channels").value = formatSectionItems(service.channels);
+  document.querySelector("#admin-ai-resources").value = formatResourceItems(service.resources);
+  document.querySelector("#admin-ai-checklist").value = formatSectionItems(service.checklist);
 }
 
 function buildAiServiceModal() {
@@ -377,8 +437,16 @@ Opcional: agrega notas, requisitos, canales o costos si la web no se puede leer.
             Canales
             <textarea id="admin-ai-channels" placeholder="Título | Descripción"></textarea>
           </label>
+          <label class="admin-ai-full">
+            Recursos útiles
+            <textarea id="admin-ai-resources" placeholder="Consulta de afiliación | Verifica si figuras como afiliado | https://www.gob.pe/... | consulta"></textarea>
+          </label>
+          <label class="admin-ai-full">
+            Checklist
+            <textarea id="admin-ai-checklist" placeholder="Verificar requisitos | Confirma edad, clasificación y documentos antes de iniciar."></textarea>
+          </label>
 
-          <p class="admin-ai-help admin-ai-full">Formato de listas: una línea por elemento usando Título | Descripción.</p>
+          <p class="admin-ai-help admin-ai-full">Formato de listas: Título | Descripción. Recursos: Título | Descripción | URL | Tipo.</p>
           <ul class="admin-ai-validation admin-ai-full" id="admin-ai-validation" hidden></ul>
           <p class="admin-ai-message admin-ai-full" aria-live="polite"></p>
 

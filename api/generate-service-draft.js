@@ -176,6 +176,8 @@ export default async function handler(request, response) {
                   "Crea un borrador de servicio social basado solo en las fuentes entregadas.",
                   "No inventes requisitos, costos, canales ni enlaces. Si falta un dato, escribe 'Por verificar'.",
                   "Si las fuentes incluyen enlaces leidos, usa esos textos como fuente principal.",
+                  "Extrae recursos utiles oficiales cuando existan, como consultas de afiliacion, formularios, cronogramas o paginas informativas.",
+                  "Crea un checklist breve con acciones concretas que el ciudadano pueda marcar antes de iniciar el tramite.",
                   "Responde solo JSON valido, sin markdown."
                 ].join(" ")
               }
@@ -203,7 +205,9 @@ export default async function handler(request, response) {
                   "\"requirements\":[{\"title\":\"\",\"description\":\"\"}],",
                   "\"documents\":[{\"title\":\"\",\"description\":\"\"}],",
                   "\"steps\":[{\"title\":\"\",\"description\":\"\"}],",
-                  "\"channels\":[{\"title\":\"\",\"description\":\"\"}]",
+                  "\"channels\":[{\"title\":\"\",\"description\":\"\"}],",
+                  "\"resources\":[{\"title\":\"\",\"description\":\"\",\"url\":\"\",\"type\":\"consulta|información|formulario|cronograma|ubicación|otro\"}],",
+                  "\"checklist\":[{\"title\":\"\",\"description\":\"\"}]",
                   "}",
                   "",
                   "Enlaces enviados por el administrador:",

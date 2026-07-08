@@ -125,6 +125,38 @@ window.CercaRedServices = [
         description: "942 962 116 · Lunes a viernes 8am a 5pm",
       },
     ],
+    resources: [
+      {
+        title: "Consulta de afiliación",
+        description: "Revisa desde la página oficial los canales disponibles para verificar si figuras como usuario.",
+        url: "https://www.gob.pe/pension65",
+        type: "consulta",
+      },
+      {
+        title: "Información oficial del programa",
+        description: "Página institucional con orientación, requisitos y canales oficiales.",
+        url: "https://www.gob.pe/pension65",
+        type: "información",
+      },
+    ],
+    checklist: [
+      {
+        title: "Tener DNI vigente",
+        description: "Confirma que el DNI del adulto mayor esté disponible y actualizado.",
+      },
+      {
+        title: "Revisar clasificación SISFOH",
+        description: "Verifica que el hogar esté clasificado como pobreza extrema.",
+      },
+      {
+        title: "Confirmar que no recibe otra pensión",
+        description: "El titular no debe pertenecer a ONP, AFP u otro régimen contributivo.",
+      },
+      {
+        title: "Ubicar canal de atención",
+        description: "Identifica la oficina, municipalidad o canal oficial donde consultar el estado.",
+      },
+    ],
   },
     //Aqui comienza lo de SIS
 {
