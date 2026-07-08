@@ -386,6 +386,7 @@ function renderNotFound() {
 
 function renderServiceDetail(data) {
   document.title = `${data.name} | CercaRed`;
+  window.CercaRedCurrentService = data;
 
   detailRoot.innerHTML = `
     <div class="detail-layout">
@@ -440,13 +441,6 @@ function renderServiceDetail(data) {
           </section>
         </div>
 
-        <section class="channels-section" aria-labelledby="channels-title">
-          <h2 id="channels-title">Canales de atención</h2>
-          <ul class="channels-list">
-            ${renderChannels(data.channels)}
-          </ul>
-        </section>
-
         ${renderChecklist(data.checklist)}
         ${renderResources(data.resources)}
 
@@ -491,6 +485,13 @@ function renderServiceDetail(data) {
           <button class="summary-button" type="button">Generar resumen</button>
         </section>
 
+        <section class="sidebar-card sidebar-channels-card" aria-labelledby="sidebar-channels-title">
+          <h2 id="sidebar-channels-title">Canales de atención</h2>
+          <ul class="channels-list">
+            ${renderChannels(data.channels)}
+          </ul>
+        </section>
+
         <div class="sidebar-actions">
           <button class="detail-save-button" type="button" aria-pressed="false">Guardar</button>
           <button class="detail-share-button" type="button">Compartir</button>
@@ -501,6 +502,7 @@ function renderServiceDetail(data) {
   `;
 
   wireDetailActions(data);
+  window.dispatchEvent(new CustomEvent("cercared:service-rendered", { detail: data }));
 }
 
 function getShareUrl(serviceId) {

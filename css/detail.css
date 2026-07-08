@@ -470,6 +470,34 @@
   background: var(--color-success);
 }
 
+.sidebar-channels-card .channels-list {
+  border-bottom: 0;
+}
+
+.sidebar-channels-card .channel-item {
+  padding: var(--space-3) 0;
+}
+
+.sidebar-channels-card .channel-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.sidebar-channels-card .channel-item:last-child {
+  padding-bottom: 0;
+}
+
+.sidebar-channels-card .channel-item h3 {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.sidebar-channels-card .channel-item p {
+  font-size: 14px;
+  line-height: 20px;
+}
+
 .checklist-section,
 .resources-section {
   max-width: 1200px;
