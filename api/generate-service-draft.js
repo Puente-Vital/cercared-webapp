@@ -1,3 +1,133 @@
+const MAX_URLS = 4;
+const MAX_SOURCE_CHARS = 18000;
+const MIN_EXTRACTED_TEXT_LENGTH = 120;
+
+function isPrivateHostname(hostname) {
+  const host = hostname.toLowerCase();
+  return (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "0.0.0.0" ||
+    host === "::1" ||
+    host.endsWith(".local") ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+  );
+}
+
+function toSafeUrl(rawUrl) {
+  try {
+    const url = new URL(rawUrl);
+    if (!["http:", "https:"].includes(url.protocol)) return null;
+    if (isPrivateHostname(url.hostname)) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function extractUrls(value) {
+  return Array.from(
+    new Set(String(value || "").match(/https?:\/\/[^\s<>"']+/g) || []),
+  )
+    .map((url) => url.replace(/[),.;]+$/g, ""))
+    .map(toSafeUrl)
+    .filter(Boolean)
+    .slice(0, MAX_URLS);
+}
+
+function stripHtml(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function fetchUrlText(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const pageResponse = await fetch(url, {
+      headers: {
+        "User-Agent": "CercaRedAdmin/1.0 (+https://cercared.app)",
+      },
+      signal: controller.signal,
+    });
+
+    if (!pageResponse.ok) {
+      return {
+        ok: false,
+        url,
+        text: "",
+        error: `No se pudo leer ${url} (${pageResponse.status}).`,
+      };
+    }
+
+    const contentType = pageResponse.headers.get("content-type") || "";
+    const rawText = await pageResponse.text();
+    const text = contentType.includes("text/html") ? stripHtml(rawText) : rawText;
+
+    if (text.length < MIN_EXTRACTED_TEXT_LENGTH) {
+      return {
+        ok: false,
+        url,
+        text: "",
+        error: `El enlace ${url} no tiene suficiente texto legible.`,
+      };
+    }
+
+    return {
+      ok: true,
+      url,
+      text: text.slice(0, 5000),
+    };
+  } catch {
+    return {
+      ok: false,
+      url,
+      text: "",
+      error: `No se pudo leer ${url}.`,
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function buildSourceContext(sources) {
+  const urls = extractUrls(sources);
+  const notesWithoutUrls = String(sources || "")
+    .replace(/https?:\/\/[^\s<>"']+/g, "")
+    .trim();
+  const fetchedPages = await Promise.all(urls.map(fetchUrlText));
+  const readablePages = fetchedPages.filter((page) => page.ok && page.text);
+  const failedPages = fetchedPages.filter((page) => !page.ok).map((page) => page.error);
+
+  const context = [
+    notesWithoutUrls ? `Notas del administrador:\n${notesWithoutUrls}` : "",
+    readablePages
+      .map((page) => `Fuente leida: ${page.url}\n${page.text}`)
+      .join("\n\n"),
+  ]
+    .filter(Boolean)
+    .join("\n\n")
+    .slice(0, MAX_SOURCE_CHARS);
+
+  return {
+    context,
+    urls,
+    failedPages,
+  };
+}
+
 export default async function handler(request, response) {
   if (request.method !== "POST") {
     response.setHeader("Allow", "POST");
@@ -12,13 +142,21 @@ export default async function handler(request, response) {
   }
 
   const { sources } = request.body || {};
-  if (!sources || typeof sources !== "string") {
+  if (!sources || typeof sources !== "string" || sources.trim().length < 8) {
     return response.status(400).json({
-      error: "Pega fuentes oficiales o notas verificadas para generar el servicio."
+      error: "Pega enlaces oficiales, notas verificadas o ambos para generar el servicio."
     });
   }
 
   try {
+    const { context, urls, failedPages } = await buildSourceContext(sources);
+
+    if (!context) {
+      return response.status(422).json({
+        error: "No se pudo leer texto desde los enlaces. Pega notas oficiales adicionales o prueba con otro enlace."
+      });
+    }
+
     const openaiResponse = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -37,6 +175,7 @@ export default async function handler(request, response) {
                   "Eres un asistente para administradores de CercaRed.",
                   "Crea un borrador de servicio social basado solo en las fuentes entregadas.",
                   "No inventes requisitos, costos, canales ni enlaces. Si falta un dato, escribe 'Por verificar'.",
+                  "Si las fuentes incluyen enlaces leidos, usa esos textos como fuente principal.",
                   "Responde solo JSON valido, sin markdown."
                 ].join(" ")
               }
@@ -67,8 +206,11 @@ export default async function handler(request, response) {
                   "\"channels\":[{\"title\":\"\",\"description\":\"\"}]",
                   "}",
                   "",
-                  "Fuentes o notas:",
-                  sources
+                  "Enlaces enviados por el administrador:",
+                  urls.length ? urls.join("\n") : "No se enviaron enlaces.",
+                  "",
+                  "Texto extraido y notas:",
+                  context
                 ].join("\n")
               }
             ]
@@ -93,7 +235,7 @@ export default async function handler(request, response) {
     const jsonText = text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
     const service = JSON.parse(jsonText);
 
-    return response.status(200).json({ service });
+    return response.status(200).json({ service, warnings: failedPages });
   } catch (error) {
     return response.status(500).json({
       error: "No se pudo convertir la respuesta de IA en un servicio editable."
