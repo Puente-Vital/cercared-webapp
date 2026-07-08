@@ -17,7 +17,8 @@ const db = getFirestore(app);
 
 const root = document.querySelector("#admin-root");
 const serviceDraftsKey = "cercared_admin_service_drafts";
-const services = (window.CercaRedServices || []).map(applyInitialDraft);
+const createdServicesKey = "cercared_admin_created_services";
+const services = getAllServices().map(applyInitialDraft);
 const inactiveKey = "cercared_inactive_services";
 let metricsByService = {};
 let searchQuery = "";
@@ -42,6 +43,14 @@ function applyInitialDraft(service) {
     steps: draft.steps || service.steps,
     channels: draft.channels || service.channels,
   };
+}
+
+function getCreatedServices() {
+  return readJson(createdServicesKey, []);
+}
+
+function getAllServices() {
+  return [...(window.CercaRedServices || []), ...getCreatedServices()];
 }
 
 function readJson(key, fallback) {

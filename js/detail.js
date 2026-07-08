@@ -22,7 +22,8 @@ const params = new URLSearchParams(window.location.search);
 const serviceId = params.get("id") || "pension-65";
 const INACTIVE_SERVICES_KEY = "cercared_inactive_services";
 const SERVICE_DRAFTS_KEY = "cercared_admin_service_drafts";
-const rawService = (window.CercaRedServices || []).find((item) => item.id === serviceId);
+const CREATED_SERVICES_KEY = "cercared_admin_created_services";
+const rawService = getAllServices().find((item) => item.id === serviceId);
 const service = rawService ? applyServiceDraft(rawService) : null;
 
 function getCurrentUser() {
@@ -59,6 +60,14 @@ function readJson(key, fallback) {
 
 function writeJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
+}
+
+function getCreatedServices() {
+  return readJson(CREATED_SERVICES_KEY, []);
+}
+
+function getAllServices() {
+  return [...(window.CercaRedServices || []), ...getCreatedServices()];
 }
 
 function escapeHtml(value) {
