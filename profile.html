@@ -4,14 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mi Perfil | CercaRed</title>
-  
+  <link rel="icon" type="image/png" href="assets/images/logoencabezado.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   
-  <link rel="stylesheet" href="css/base.css" />
+<link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/navbar.css" />
   <link rel="stylesheet" href="css/profile.css" />
+  <link rel="stylesheet" href="css/catalog.css" />
   <link rel="stylesheet" href="css/footer.css" />
 </head>
 <body>
@@ -79,29 +80,77 @@
 
       <section class="profile-content">
         
-        <div class="profile-card">
+<div class="profile-card">
           <h2 class="card-title">Preferencias</h2>
           
           <form id="preferencesForm" class="settings-form">
+
+
             <div class="form-row">
               <div class="form-group">
                 <label for="district">Distrito de búsqueda por defecto</label>
-                <input type="text" id="district" placeholder="Ej. San Juan de Lurigancho">
+                <select id="district" class="form-input">
+                  <option value="">Todos los distritos</option>
+                  <option value="Ancón">Ancón</option>
+                  <option value="Ate">Ate</option>
+                  <option value="Barranco">Barranco</option>
+                  <option value="Breña">Breña</option>
+                  <option value="Carabayllo">Carabayllo</option>
+                  <option value="Chaclacayo">Chaclacayo</option>
+                  <option value="Chorrillos">Chorrillos</option>
+                  <option value="Cieneguilla">Cieneguilla</option>
+                  <option value="Comas">Comas</option>
+                  <option value="El Agustino">El Agustino</option>
+                  <option value="Independencia">Independencia</option>
+                  <option value="Jesús María">Jesús María</option>
+                  <option value="La Molina">La Molina</option>
+                  <option value="La Victoria">La Victoria</option>
+                  <option value="Lima">Lima (Cercado)</option>
+                  <option value="Lince">Lince</option>
+                  <option value="Los Olivos">Los Olivos</option>
+                  <option value="Lurigancho">Lurigancho (Chosica)</option>
+                  <option value="Lurín">Lurín</option>
+                  <option value="Magdalena del Mar">Magdalena del Mar</option>
+                  <option value="Miraflores">Miraflores</option>
+                  <option value="Pachacámac">Pachacámac</option>
+                  <option value="Pucusana">Pucusana</option>
+                  <option value="Pueblo Libre">Pueblo Libre</option>
+                  <option value="Puente Piedra">Puente Piedra</option>
+                  <option value="Punta Hermosa">Punta Hermosa</option>
+                  <option value="Punta Negra">Punta Negra</option>
+                  <option value="Rímac">Rímac</option>
+                  <option value="San Bartolo">San Bartolo</option>
+                  <option value="San Borja">San Borja</option>
+                  <option value="San Isidro">San Isidro</option>
+                  <option value="San Juan de Lurigancho">San Juan de Lurigancho</option>
+                  <option value="San Juan de Miraflores">San Juan de Miraflores</option>
+                  <option value="San Luis">San Luis</option>
+                  <option value="San Martín de Porres">San Martín de Porres</option>
+                  <option value="San Miguel">San Miguel</option>
+                  <option value="Santa Anita">Santa Anita</option>
+                  <option value="Santa María del Mar">Santa María del Mar</option>
+                  <option value="Santa Rosa">Santa Rosa</option>
+                  <option value="Santiago de Surco">Santiago de Surco</option>
+                  <option value="Surquillo">Surquillo</option>
+                  <option value="Villa El Salvador">Villa El Salvador</option>
+                  <option value="Villa María del Triunfo">Villa María del Triunfo</option>
+                </select>
               </div>
+
               <div class="form-group">
                 <label for="category">Categoría favorita</label>
-                <input type="text" id="category" placeholder="Ej. Apoyo económico">
+                <select id="category" class="form-input">
+                  <option value="">Todas las categorías</option>
+                  <option value="Adulto mayor">Adulto mayor</option>
+                  <option value="Educación">Educación</option>
+                  <option value="Salud">Salud</option>
+                  <option value="Social">Social</option>
+                  <option value="Vivienda">Vivienda</option>
+                </select>
               </div>
             </div>
 
             <div class="form-row">
-              <div class="form-group">
-                <label>Tamaño de letra</label>
-                <div class="toggle-group" id="fontSizeToggle">
-                  <button type="button" class="btn-toggle active" data-value="normal" aria-pressed="true">Normal (16px)</button>
-                  <button type="button" class="btn-toggle" data-value="large" aria-pressed="false">Grande (20px)</button>
-                </div>
-              </div>
               <div class="form-group">
                 <label>Modo de vista</label>
                 <div class="toggle-group" id="viewModeToggle">
@@ -109,12 +158,14 @@
                   <button type="button" class="btn-toggle" data-value="simple" aria-pressed="false">Simple</button>
                 </div>
               </div>
-            </div> <div style="display: flex; align-items: center; gap: 15px; margin-top: 25px;">
+            </div> 
+
+            <div style="display: flex; align-items: center; gap: 15px; margin-top: 25px;">
               <button type="submit" class="btn btn-primary" id="savePreferencesBtn" style="width: auto; padding: 10px 24px; margin: 0;">
                 Guardar preferencias
               </button>
-<div id="preferencesSuccessMessage" style="color: var(--color-success, #2e7d32); font-size: 14px; font-weight: 500; visibility: hidden; opacity: 0; transition: opacity 0.3s ease; white-space: nowrap;"></div>
-            </div> 
+              <div id="preferencesSuccessMessage" style="color: var(--color-success, #2e7d32); font-size: 14px; font-weight: 500; visibility: hidden; opacity: 0; transition: opacity 0.3s ease; white-space: nowrap;"></div>
+            </div>
           </form>
         </div>
 
@@ -146,9 +197,10 @@
     </div>
   </main>
 
-  <main-footer></main-footer>
+<main-footer></main-footer>
 
   <script type="module" src="js/navbar.js"></script>
   <script src="js/footer.js"></script>
+  <script src="js/distrito-desplegable.js"></script>
   <script type="module" src="js/profile.js"></script>
 </html>

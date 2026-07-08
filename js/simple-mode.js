@@ -1,13 +1,23 @@
 (function () {
-  const KEY = "cercared_simple_mode";
+  const KEY_OLD = "cercared_simple_mode";
+  const USER_KEY = "cercared_currentUser";
   const root = document.documentElement;
-  const isOn = () => localStorage.getItem(KEY) === "on";
+
+  // 🚀 Modificado: Determina si el modo simple está activo basado en la sesión real del usuario
+  const isOn = () => {
+    try {
+      const user = JSON.parse(localStorage.getItem(USER_KEY));
+      if (user && user.preferences) {
+        return user.preferences.viewMode === "simple";
+      }
+    } catch (e) {}
+    return localStorage.getItem(KEY_OLD) === "on";
+  };
+
   const SIMPLE_DISTRITOS = ["Ancón", "Ate", "Barranco", "Breña", "Carabayllo", "Chaclacayo", "Chorrillos", "Cieneguilla", "Comas", "El Agustino", "Independencia", "Jesús María", "La Molina", "La Victoria", "Lima (Cercado)", "Lince", "Los Olivos", "Lurigancho-Chosica", "Lurín", "Magdalena del Mar", "Miraflores", "Pachacámac", "Pucusana", "Pueblo Libre", "Puente Piedra", "Punta Hermosa", "Punta Negra", "Rímac", "San Bartolo", "San Borja", "San Isidro", "San Juan de Lurigancho", "San Juan de Miraflores", "San Luis", "San Martín de Porres", "San Miguel", "Santa Anita", "Santa María del Mar", "Santa Rosa", "Santiago de Surco", "Surquillo", "Villa El Salvador", "Villa María del Triunfo"];
 
   function getMain() {
-    return document.querySelector(".detail-main") ||
-           document.querySelector("#service-detail") ||
-           document.querySelector("main");
+    return document.querySelector(".detail-main") || document.querySelector("#service-detail") || document.querySelector("main");
   }
 
   function currentService() {
@@ -18,12 +28,7 @@
   }
 
   function escapeHtml(value) {
-    return String(value ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
+    return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
   }
 
   function compactText(item) {
@@ -44,27 +49,15 @@
         { label: "Costo", value: service.cost || "Por verificar", highlight: normalizeText(service.cost).includes("gratuito") },
         { label: "Atención", value: service.attention || service.modality || "Por verificar" },
       ],
-      needs: requirements.length
-        ? requirements.map(compactText)
-        : legacy.needs || ["Revisa los requisitos oficiales antes de iniciar."],
-      doSteps: steps.length
-        ? steps.map(compactText)
-        : legacy.doSteps || ["Lee la información del servicio.", "Acude o ingresa al canal oficial.", "Consulta el estado de tu solicitud."],
-      places: channels.length
-        ? channels.map((channel) => ({
-            title: channel.title,
-            description: channel.description,
-          }))
-        : legacy.places || [],
+      needs: requirements.length ? requirements.map(compactText) : legacy.needs || ["Revisa los requisitos oficiales antes de iniciar."],
+      doSteps: steps.length ? steps.map(compactText) : legacy.doSteps || ["Lee la información del servicio.", "Acude o ingresa al canal oficial.", "Consulta el estado de tu solicitud."],
+      places: channels.length ? channels.map((channel) => ({ title: channel.title, description: channel.description })) : legacy.places || [],
       resources: service.resources || [],
     };
   }
 
   function normalizeText(value) {
-    return String(value || "")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase();
+    return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   }
 
   function banner(show, mode) {
@@ -90,13 +83,10 @@
 
   function simpleHTML(s) {
     const d = buildSimpleData(s);
-    const facts = d.facts.map((f) =>
-      `<div class="s-fact"><span class="s-fact-label">${escapeHtml(f.label)}</span><span class="s-fact-value${f.highlight ? " s-ok" : ""}">${escapeHtml(f.value)}</span></div>`).join("");
+    const facts = d.facts.map((f) => `<div class="s-fact"><span class="s-fact-label">${escapeHtml(f.label)}</span><span class="s-fact-value${f.highlight ? " s-ok" : ""}">${escapeHtml(f.value)}</span></div>`).join("");
     const needs = d.needs.map((n) => `<li>${escapeHtml(n)}</li>`).join("");
-    const steps = d.doSteps.map((p, i) =>
-      `<li><span class="s-step-num${i === d.doSteps.length - 1 ? " s-step-last" : ""}">${i + 1}</span><span>${escapeHtml(p)}</span></li>`).join("");
-    const places = d.places.map((p) =>
-      `<div class="s-place"><strong>${escapeHtml(p.title)}</strong><span>${escapeHtml(p.description)}</span></div>`).join("");
+    const steps = d.doSteps.map((p, i) => `<li><span class="s-step-num${i === d.doSteps.length - 1 ? " s-step-last" : ""}">${i + 1}</span><span>${escapeHtml(p)}</span></li>`).join("");
+    const places = d.places.map((p) => `<div class="s-place"><strong>${escapeHtml(p.title)}</strong><span>${escapeHtml(p.description)}</span></div>`).join("");
     const resources = d.resources.filter((resource) => resource.url).map((resource) => `
       <a class="s-resource" href="${escapeHtml(resource.url)}" target="_blank" rel="noreferrer">
         ${escapeHtml(resource.title)}
@@ -124,11 +114,13 @@
 
   function apply(on) {
     root.classList.toggle("simple-mode", on);
+    // Inyecta la clase de escala tipográfica que creamos para la base
+    document.body.classList.toggle("view-mode-simple", on);
+
     document.querySelectorAll(".simple-mode-button").forEach((b) => {
       b.textContent = on ? "Modo normal" : "Modo simple";
       b.setAttribute("aria-pressed", String(on));
     });
-
     const main = getMain();
     if (!main) { banner(on); return; }
     const layout = main.querySelector(".detail-layout");
@@ -137,7 +129,7 @@
     if (on) {
       const service = currentService();
       if (!service) { banner(true, "warn"); return; }
-      if (layout) layout.style.display = "none";      // ocultar (no borrar)
+      if (layout) layout.style.display = "none";
       if (!view) main.insertAdjacentHTML("beforeend", simpleHTML(service));
       banner(true);
     } else {
@@ -147,28 +139,40 @@
     }
   }
 
+  // 🚀 Sincroniza el clic del botón con el objeto de configuración del usuario
   function toggle() {
-    localStorage.setItem(KEY, isOn() ? "off" : "on");
-    apply(isOn());
+    const nextState = isOn() ? "normal" : "simple";
+    localStorage.setItem(KEY_OLD, nextState === "simple" ? "on" : "off");
+
+    try {
+      const user = JSON.parse(localStorage.getItem(USER_KEY));
+      if (user) {
+        if (!user.preferences) user.preferences = {};
+        user.preferences.viewMode = nextState;
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+        
+        // Dispara un evento global opcional para avisar a Firebase si estuviera activo en segundo plano
+        document.dispatchEvent(new CustomEvent("cercared:preferences-updated", { detail: user.preferences }));
+      }
+    } catch (e) {}
+
+    apply(nextState === "simple");
   }
 
   document.addEventListener("click", (e) => {
     if (e.target.closest(".simple-mode-button")) toggle();
   });
-
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".s-summary")) return;
     const original = document.querySelector(".detail-layout .summary-button");
     if (original) original.click();
   });
-
   window.addEventListener("cercared:service-rendered", () => {
     const view = getMain()?.querySelector(".simple-view");
     if (!isOn()) return;
     if (view) view.remove();
     apply(true);
   });
-
   function watch() {
     const main = getMain();
     if (!main) return;
