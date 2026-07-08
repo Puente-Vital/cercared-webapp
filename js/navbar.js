@@ -37,12 +37,13 @@ window.addEventListener("resize", () => {
   }
 });
 
+// 🚀 LA FUNCIÓN ORIGINAL CORREGIDA: Sincroniza al instante usando localStorage
 function updateAuthLink() {
   const currentUserStr = localStorage.getItem('cercared_currentUser');
-  const navMenu = document.getElementById('nav-menu');
-  if (!navMenu) return;
+  const navMenuElement = document.getElementById('nav-menu');
+  if (!navMenuElement) return;
 
-  const authLink = navMenu.querySelector('a[href="auth.html"], a[href="profile.html"]');
+  const authLink = navMenuElement.querySelector('a[href="auth.html"], a[href="profile.html"]');
   if (!authLink) return;
 
   if (currentUserStr) {
@@ -61,7 +62,9 @@ function updateAuthLink() {
   else authLink.removeAttribute('aria-current');
 }
 
+// 🚀 AQUÍ ESTÁ LA CLAVE: Hacerla global explícitamente para que auth.js la encuentre
 window.CercaRedNavbar = { updateAuthLink };
 
+// Ejecutar inmediatamente al cargar el documento
 document.addEventListener('DOMContentLoaded', updateAuthLink);
 window.addEventListener('storage', updateAuthLink);

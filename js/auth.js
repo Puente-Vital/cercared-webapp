@@ -51,8 +51,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const registerConfirmPasswordError = document.getElementById('registerConfirmPasswordError');
   const registerTermsError = document.getElementById('registerTermsError');
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const registerTermsCheckbox = document.getElementById('registerTerms');
+  const registerTermsErrorSpan = document.getElementById('registerTermsError');
 
-  // Manejo de vistas interactivas (Toggle entre Login y Registro)
+
+  if (registerTermsCheckbox && registerTermsErrorSpan) {
+    registerTermsCheckbox.addEventListener('change', () => {
+      if (registerTermsCheckbox.checked) {
+        registerTermsErrorSpan.textContent = ""; 
+      }
+    });
+  }
   toRegister.addEventListener('click', (e) => {
     e.preventDefault();
     loginView.classList.add('hidden');
@@ -150,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const passwordValue = registerPassword.value.trim();
     const confirmPasswordValue = registerConfirmPassword.value.trim();
     const regexNombre = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/; 
-    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{8,}$/;
+    const passwordRegex = /^(?=.*[A-Za-zñÑáéíóúÁÉÍÓÚ])(?=.*\d)(?=.*[@$!%*?&.#\-_])[A-Za-z\dñÑáéíóúÁÉÍÓÚ@$!%*?&.#\-_]{8,}$/;
 
     registerPasswordError.textContent = "";
     registerPassword.classList.remove('input-error');
@@ -213,7 +222,7 @@ if (nameValue === "") {
           const user = result.user;
           
           try {
-            // Guardamos solo los datos necesarios en Firestore (Sin teléfono)
+
             await setDoc(doc(db, "users", user.uid), {
               name: nameValue,
               email: emailValue,
@@ -224,7 +233,6 @@ if (nameValue === "") {
               displayName: nameValue
             });
 
-            // Enviar correo de verificación nativo
             await sendEmailVerification(user);
             console.log("Correo de verificación enviado.");
 
@@ -265,14 +273,12 @@ if (nameValue === "") {
     }
   });
 
-
-// Variables para la modal de recuperación simplificada por Email Real
   const forgotPasswordLink = document.getElementById('forgotPassword');
   const recoveryModal = document.getElementById('recoveryModal');
   const closeModal = document.getElementById('closeModal');
   const step1 = document.getElementById('recoveryStep1');
-  const step2 = document.getElementById('recoveryStep2'); // Mantener variables si existen en el HTML para evitar errores
-  const step3 = document.getElementById('recoveryStep3'); // Mantener variables si existen en el HTML para evitar errores
+  const step2 = document.getElementById('recoveryStep2'); 
+  const step3 = document.getElementById('recoveryStep3'); 
   const step4 = document.getElementById('recoveryStep4');
   const btnStep1 = document.getElementById('btnRecoveryStep1');
   const btnFinish = document.getElementById('btnRecoveryFinish');
