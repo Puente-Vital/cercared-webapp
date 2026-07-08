@@ -278,3 +278,13 @@ input.input-error {
 #profileEditMode .btn-primary {
   margin-bottom: 16px;
 }
+
+.profile-notice {
+  background-color: var(--color-soft); 
+  color: var(--color-primary);
+  padding: var(--space-3);
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  font-size: 15px;
+  line-height: 1.5;
+}

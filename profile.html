@@ -113,12 +113,12 @@
               <button type="submit" class="btn btn-primary" id="savePreferencesBtn" style="width: auto; padding: 10px 24px; margin: 0;">
                 Guardar preferencias
               </button>
-              
-              <div id="preferencesSuccessMessage" style="color: var(--color-success, #2e7d32); font-size: 14px; font-weight: 500; visibility: hidden; opacity: 0; transition: opacity 0.3s ease; white-space: nowrap;"></div>
-            </div> </form>
-           </div>
+<div id="preferencesSuccessMessage" style="color: var(--color-success, #2e7d32); font-size: 14px; font-weight: 500; visibility: hidden; opacity: 0; transition: opacity 0.3s ease; white-space: nowrap;"></div>
+            </div> 
+          </form>
+        </div>
 
-        <div class="profile-card">
+        <div class="profile-card" id="passwordCard" style="display: none;">
           <h2 class="card-title">Cambiar contraseña</h2>
           
           <form id="passwordForm" class="settings-form">
@@ -148,7 +148,7 @@
 
   <main-footer></main-footer>
 
-  <script src="js/navbar.js"></script>
+  <script type="module" src="js/navbar.js"></script>
   <script src="js/footer.js"></script>
   <script type="module" src="js/profile.js"></script>
 </html>
