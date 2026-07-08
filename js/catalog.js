@@ -133,21 +133,108 @@ function formatSectionItems(items = []) {
   return items.map((item) => `${item.title || ""} | ${item.description || ""}`).join("\n");
 }
 
+function setFieldError(selector, hasError) {
+  document.querySelector(selector)?.classList.toggle("input-error", hasError);
+}
+
+function validateSectionTextarea(selector, label, errors) {
+  const field = document.querySelector(selector);
+  const value = field?.value.trim() || "";
+  const lines = value.split("\n").map((line) => line.trim()).filter(Boolean);
+
+  setFieldError(selector, false);
+
+  if (lines.length === 0) {
+    errors.push(`${label}: agrega al menos un elemento.`);
+    setFieldError(selector, true);
+    return [];
+  }
+
+  const hasInvalidLine = lines.some((line) => {
+    const [title, ...descriptionParts] = line.split("|");
+    return !title?.trim() || !descriptionParts.join("|").trim();
+  });
+
+  if (hasInvalidLine) {
+    errors.push(`${label}: usa el formato Título | Descripción.`);
+    setFieldError(selector, true);
+  }
+
+  return parseSectionItems(value);
+}
+
+function validateRequiredField(selector, label, errors) {
+  const field = document.querySelector(selector);
+  const value = field?.value.trim() || "";
+
+  setFieldError(selector, !value);
+  if (!value) errors.push(`${label} es obligatorio.`);
+
+  return value;
+}
+
+function validateUrlField(selector, label, errors) {
+  const field = document.querySelector(selector);
+  const value = field?.value.trim() || "";
+
+  setFieldError(selector, false);
+  if (!value) return value;
+
+  try {
+    const url = new URL(value);
+    if (!["http:", "https:"].includes(url.protocol)) {
+      throw new Error("invalid protocol");
+    }
+  } catch {
+    errors.push(`${label} debe ser un enlace válido.`);
+    setFieldError(selector, true);
+  }
+
+  return value;
+}
+
+function renderAiValidation(errors) {
+  const list = document.querySelector("#admin-ai-validation");
+  if (!list) return;
+
+  list.replaceChildren(
+    ...errors.map((error) => {
+      const item = document.createElement("li");
+      item.textContent = error;
+      return item;
+    }),
+  );
+  list.hidden = errors.length === 0;
+}
+
+function setAiMessage(message, type = "info") {
+  const messageElement = document.querySelector(".admin-ai-message");
+  if (!messageElement) return;
+  messageElement.textContent = message;
+  messageElement.dataset.type = type;
+}
+
 function createServiceFromForm() {
-  const name = document.querySelector("#admin-ai-name").value.trim();
-  const entity = document.querySelector("#admin-ai-entity").value.trim();
+  const errors = [];
+  const name = validateRequiredField("#admin-ai-name", "Nombre", errors);
+  const entity = validateRequiredField("#admin-ai-entity", "Entidad", errors);
   const category = document.querySelector("#admin-ai-category").value;
-  const description = document.querySelector("#admin-ai-description").value.trim();
-  const shortDescription = document.querySelector("#admin-ai-short-description").value.trim();
-  const officialUrl = document.querySelector("#admin-ai-url").value.trim();
+  const description = validateRequiredField("#admin-ai-description", "Descripción principal", errors);
+  const shortDescription = validateRequiredField("#admin-ai-short-description", "Descripción corta", errors);
+  const officialUrl = validateUrlField("#admin-ai-url", "Canal oficial", errors);
   const cost = document.querySelector("#admin-ai-cost").value.trim() || "Gratuito";
   const scope = document.querySelector("#admin-ai-scope").value.trim() || "Nacional";
   const modality = document.querySelector("#admin-ai-modality").value;
   const attention = document.querySelector("#admin-ai-attention").value.trim() || modality;
   const district = document.querySelector("#admin-ai-district").value.trim() || "Nacional";
+  const requirements = validateSectionTextarea("#admin-ai-requirements", "Requisitos", errors);
+  const documents = validateSectionTextarea("#admin-ai-documents", "Documentos", errors);
+  const steps = validateSectionTextarea("#admin-ai-steps", "Pasos", errors);
+  const channels = validateSectionTextarea("#admin-ai-channels", "Canales", errors);
 
-  if (!name || !entity || !description) {
-    throw new Error("Completa nombre, entidad y descripción antes de guardar.");
+  renderAiValidation(errors);
+  if (errors.length > 0) {
+    throw new Error("Revisa los campos marcados antes de guardar.");
   }
 
   return {
@@ -166,16 +253,16 @@ function createServiceFromForm() {
     cost,
     officialUrl: officialUrl || "#",
     active: true,
-    requirements: parseSectionItems(document.querySelector("#admin-ai-requirements").value),
-    documents: parseSectionItems(document.querySelector("#admin-ai-documents").value),
-    steps: parseSectionItems(document.querySelector("#admin-ai-steps").value),
+    requirements,
+    documents,
+    steps,
     procedures: [
       {
         value: "procedimiento-general",
         label: "Procedimiento general",
       },
     ],
-    channels: parseSectionItems(document.querySelector("#admin-ai-channels").value),
+    channels,
   };
 }
 
@@ -205,13 +292,16 @@ function buildAiServiceModal() {
         <p class="admin-ai-eyebrow">Administración</p>
         <h2 id="admin-ai-title">Añadir servicio con IA</h2>
         <p class="admin-ai-intro">
-          Pega fuentes oficiales o notas verificadas. La IA genera un borrador editable antes de agregarlo al catálogo.
+          Pega enlaces oficiales, notas verificadas o ambos. La IA intentará leer los enlaces y generar un borrador editable.
         </p>
 
         <form class="admin-ai-form" id="admin-ai-form">
           <label class="admin-ai-full">
-            Fuentes oficiales o notas
-            <textarea id="admin-ai-sources" placeholder="Pega enlaces oficiales, requisitos, canales, costos y pasos del servicio."></textarea>
+            Enlaces oficiales o notas opcionales
+            <textarea id="admin-ai-sources" placeholder="Puedes pegar solo enlaces, por ejemplo:
+https://www.gob.pe/...
+
+Opcional: agrega notas, requisitos, canales o costos si la web no se puede leer."></textarea>
           </label>
           <div class="admin-ai-actions admin-ai-full">
             <button class="admin-ai-generate" type="button">Generar borrador con IA</button>
@@ -289,6 +379,7 @@ function buildAiServiceModal() {
           </label>
 
           <p class="admin-ai-help admin-ai-full">Formato de listas: una línea por elemento usando Título | Descripción.</p>
+          <ul class="admin-ai-validation admin-ai-full" id="admin-ai-validation" hidden></ul>
           <p class="admin-ai-message admin-ai-full" aria-live="polite"></p>
 
           <div class="admin-ai-actions admin-ai-full">
@@ -312,27 +403,40 @@ function openAiServiceModal() {
   const generateButton = modal.querySelector(".admin-ai-generate");
   const form = modal.querySelector("#admin-ai-form");
   const message = modal.querySelector(".admin-ai-message");
+  const saveButton = form.querySelector(".admin-ai-save");
+  let pendingServiceToSave = null;
 
   const closeModal = () => {
     modal.remove();
     document.body.classList.remove("has-admin-ai-modal");
   };
 
-  closeButton.addEventListener("click", closeModal);
-  cancelButton.addEventListener("click", closeModal);
+  const closeWithConfirmation = () => {
+    const hasContent = Array.from(modal.querySelectorAll("input, textarea"))
+      .some((field) => field.value.trim());
+    if (!hasContent || window.confirm("Hay información sin guardar. ¿Cerrar de todos modos?")) {
+      closeModal();
+    }
+  };
+
+  closeButton.addEventListener("click", closeWithConfirmation);
+  cancelButton.addEventListener("click", closeWithConfirmation);
   modal.addEventListener("click", (event) => {
-    if (event.target === modal) closeModal();
+    if (event.target === modal) closeWithConfirmation();
   });
 
   generateButton.addEventListener("click", async () => {
     const sources = document.querySelector("#admin-ai-sources").value.trim();
+    renderAiValidation([]);
     if (!sources) {
-      message.textContent = "Pega fuentes oficiales o notas antes de generar.";
+      setFieldError("#admin-ai-sources", true);
+      setAiMessage("Pega al menos un enlace oficial o una nota antes de generar.", "error");
       return;
     }
 
+    setFieldError("#admin-ai-sources", false);
     generateButton.disabled = true;
-    message.textContent = "Generando borrador...";
+    setAiMessage("Leyendo fuentes y generando borrador...", "info");
 
     try {
       const response = await fetch("/api/generate-service-draft", {
@@ -344,25 +448,47 @@ function openAiServiceModal() {
       if (!response.ok) throw new Error(payload.error || "No se pudo generar el servicio.");
 
       fillAiServiceForm(payload.service);
-      message.textContent = "Borrador generado. Revísalo antes de agregarlo.";
+      pendingServiceToSave = null;
+      saveButton.textContent = "Agregar al catálogo";
+      setAiMessage(payload.warnings?.length
+        ? `Borrador generado. Algunos enlaces no se pudieron leer: ${payload.warnings.join(" ")}`
+        : "Borrador generado. Revísalo antes de agregarlo.", payload.warnings?.length ? "warning" : "success");
     } catch (error) {
-      message.textContent = error.message;
+      setAiMessage(error.message, "error");
     } finally {
       generateButton.disabled = false;
     }
+  });
+
+  form.addEventListener("input", () => {
+    pendingServiceToSave = null;
+    saveButton.textContent = "Agregar al catálogo";
   });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
       const newService = createServiceFromForm();
+
+      if (JSON.stringify(pendingServiceToSave) !== JSON.stringify(newService)) {
+        pendingServiceToSave = newService;
+        saveButton.textContent = "Confirmar agregado";
+        setAiMessage(`Revisa el borrador. Vuelve a presionar para agregar "${newService.name}".`, "warning");
+        return;
+      }
+
+      saveButton.disabled = true;
+      setAiMessage("Guardando servicio en Firestore...", "info");
       await saveService(newService);
       services = await loadServices();
+      setAiMessage("Servicio agregado al catálogo.", "success");
       closeModal();
       clearFilters();
     } catch (error) {
       console.error(error);
-      message.textContent = "No se pudo guardar en Firestore. Revisa permisos de admin.";
+      setAiMessage(error.message || "No se pudo guardar en Firestore. Revisa permisos de admin.", "error");
+    } finally {
+      form.querySelector(".admin-ai-save").disabled = false;
     }
   });
 
