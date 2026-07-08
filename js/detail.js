@@ -34,6 +34,14 @@ function formatSectionItems(items) {
     .join("\n");
 }
 
+function formatResourceItems(items) {
+  return (items || [])
+    .map((item) =>
+      `${item.title || ""} | ${item.description || ""} | ${item.url || ""} | ${item.type || "otro"}`,
+    )
+    .join("\n");
+}
+
 function parseSectionItems(value) {
   return value
     .split("\n")
@@ -46,6 +54,33 @@ function parseSectionItems(value) {
         description: descriptionParts.join("|").trim() || "Por verificar",
       };
     });
+}
+
+function parseResourceItems(value) {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [title, description = "", url = "", type = "otro"] = line
+        .split("|")
+        .map((part) => part.trim());
+      return {
+        title,
+        description: description || "Recurso oficial relacionado al servicio.",
+        url,
+        type: type || "otro",
+      };
+    });
+}
+
+function isValidHttpUrl(value) {
+  try {
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol);
+  } catch {
+    return false;
+  }
 }
 
 function validateTextField(selector, label, errors) {
@@ -85,6 +120,48 @@ function validateSectionField(selector, label, errors) {
   }
 
   return parseSectionItems(value);
+}
+
+function validateOptionalSectionField(selector, label, errors) {
+  const field = document.querySelector(selector);
+  const value = field?.value.trim() || "";
+  const lines = value.split("\n").map((line) => line.trim()).filter(Boolean);
+
+  field?.classList.remove("input-error");
+  if (lines.length === 0) return [];
+
+  const hasInvalidLine = lines.some((line) => {
+    const [title, ...descriptionParts] = line.split("|");
+    return !title?.trim() || !descriptionParts.join("|").trim();
+  });
+
+  if (hasInvalidLine) {
+    errors.push(`${label} debe usar el formato: Título | Descripción.`);
+    field?.classList.add("input-error");
+  }
+
+  return parseSectionItems(value);
+}
+
+function validateResourceField(selector, label, errors) {
+  const field = document.querySelector(selector);
+  const value = field?.value.trim() || "";
+  const lines = value.split("\n").map((line) => line.trim()).filter(Boolean);
+
+  field?.classList.remove("input-error");
+  if (lines.length === 0) return [];
+
+  const hasInvalidLine = lines.some((line) => {
+    const [title, , url] = line.split("|").map((part) => part.trim());
+    return !title || !url || !isValidHttpUrl(url);
+  });
+
+  if (hasInvalidLine) {
+    errors.push(`${label} debe usar el formato: Título | Descripción | URL | Tipo con enlaces válidos.`);
+    field?.classList.add("input-error");
+  }
+
+  return parseResourceItems(value);
 }
 
 function isServiceInactive(serviceData) {
@@ -155,6 +232,62 @@ function renderProcedures(items) {
     .join("");
 }
 
+function renderChecklist(items = []) {
+  if (!items.length) return "";
+
+  return `
+    <section class="checklist-section" aria-labelledby="checklist-title">
+      <div class="section-heading-inline">
+        <h2 id="checklist-title">Checklist antes de iniciar</h2>
+        <p>Marca lo que ya tienes listo. Esta lista no modifica tus datos.</p>
+      </div>
+      <ul class="checklist-list">
+        ${items
+          .map(
+            (item, index) => `
+              <li>
+                <label class="checklist-item">
+                  <input type="checkbox" aria-label="${escapeHtml(item.title)}" />
+                  <span>
+                    <strong>${escapeHtml(item.title)}</strong>
+                    <small>${escapeHtml(item.description)}</small>
+                  </span>
+                </label>
+              </li>
+            `,
+          )
+          .join("")}
+      </ul>
+    </section>
+  `;
+}
+
+function renderResources(items = []) {
+  if (!items.length) return "";
+
+  return `
+    <section class="resources-section" aria-labelledby="resources-title">
+      <h2 id="resources-title">Recursos útiles</h2>
+      <div class="resources-grid">
+        ${items
+          .map(
+            (item) => `
+              <article class="resource-card">
+                <span>${escapeHtml(item.type || "recurso")}</span>
+                <h3>${escapeHtml(item.title)}</h3>
+                <p>${escapeHtml(item.description)}</p>
+                <a href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">
+                  Abrir recurso →
+                </a>
+              </article>
+            `,
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
 function renderAdminEditor(data) {
   if (!isAdminUser()) return "";
 
@@ -199,8 +332,16 @@ function renderAdminEditor(data) {
           Canales de atención
           <textarea id="admin-edit-channels">${escapeHtml(formatSectionItems(data.channels))}</textarea>
         </label>
+        <label>
+          Recursos útiles
+          <textarea id="admin-edit-resources" placeholder="Título | Descripción | URL | Tipo">${escapeHtml(formatResourceItems(data.resources))}</textarea>
+        </label>
+        <label>
+          Checklist
+          <textarea id="admin-edit-checklist" placeholder="Título | Descripción">${escapeHtml(formatSectionItems(data.checklist))}</textarea>
+        </label>
         <p class="admin-editor-help" id="admin-editor-help">
-          Escribe cada elemento en una línea usando el formato: Título | Descripción.
+          Escribe cada elemento en una línea. Listas: Título | Descripción. Recursos: Título | Descripción | URL | Tipo.
         </p>
         <ul class="admin-validation-list" id="admin-validation-list" hidden></ul>
         <div class="admin-service-form-actions">
@@ -306,6 +447,9 @@ function renderServiceDetail(data) {
           </ul>
         </section>
 
+        ${renderChecklist(data.checklist)}
+        ${renderResources(data.resources)}
+
         <a class="official-channel" href="${data.officialUrl}" target="_blank" rel="noreferrer">
           Ir al canal oficial →
         </a>
@@ -378,7 +522,9 @@ function toSavedService(data) {
 function buildSummary(data) {
   const requirements = data.requirements.map((item) => `- ${item.title}`).join("\n");
   const steps = data.steps.map((item, index) => `${index + 1}. ${item.title}`).join("\n");
-  return `${data.name}\n\nRequisitos principales:\n${requirements}\n\nPasos:\n${steps}\n\nCanal oficial: ${data.officialUrl}`;
+  const checklist = (data.checklist || []).map((item) => `- ${item.title}`).join("\n");
+  const resources = (data.resources || []).map((item) => `- ${item.title}: ${item.url}`).join("\n");
+  return `${data.name}\n\nRequisitos principales:\n${requirements}\n\nPasos:\n${steps}${checklist ? `\n\nChecklist:\n${checklist}` : ""}${resources ? `\n\nRecursos utiles:\n${resources}` : ""}\n\nCanal oficial: ${data.officialUrl}`;
 }
 
 function showDetailToast(message) {
@@ -505,6 +651,8 @@ function wireDetailActions(data) {
       documents: validateSectionField("#admin-edit-documents", "Documentos", errors),
       steps: validateSectionField("#admin-edit-steps", "Pasos", errors),
       channels: validateSectionField("#admin-edit-channels", "Canales de atención", errors),
+      resources: validateResourceField("#admin-edit-resources", "Recursos útiles", errors),
+      checklist: validateOptionalSectionField("#admin-edit-checklist", "Checklist", errors),
     };
 
     renderValidationErrors(errors);
@@ -558,6 +706,14 @@ function buildSummaryModal(data) {
   const channelItems = data.channels
     .map((c) => `<li class="summary-modal-channel">${c.title}. ${c.description}</li>`)
     .join("");
+
+  const checklistItems = (data.checklist || [])
+    .map((c) => `<li class="summary-modal-channel">${c.title}. ${c.description}</li>`)
+    .join("");
+
+  const resourceItems = (data.resources || [])
+    .map((r) => `<li class="summary-modal-channel">${r.title}. ${r.url}</li>`)
+    .join("");
  
   return `
     <div
@@ -602,6 +758,23 @@ function buildSummaryModal(data) {
             <ul class="summary-modal-channels">${channelItems}</ul>
           </div>
         </div>
+
+        ${(checklistItems || resourceItems) ? `
+          <div class="summary-modal-grid">
+            ${checklistItems ? `
+              <div>
+                <h3 class="summary-modal-section-title">Checklist</h3>
+                <ul class="summary-modal-channels">${checklistItems}</ul>
+              </div>
+            ` : ""}
+            ${resourceItems ? `
+              <div>
+                <h3 class="summary-modal-section-title">Recursos utiles</h3>
+                <ul class="summary-modal-channels">${resourceItems}</ul>
+              </div>
+            ` : ""}
+          </div>
+        ` : ""}
  
         <div class="summary-modal-actions">
           <button class="summary-modal-copy" type="button" id="summary-modal-copy-btn">
@@ -711,6 +884,9 @@ function downloadSummaryPDF(data) {
         if (titulo === "CANALES DE ATENCIÓN") {
           textoLinea = `• ${item.title}: ${item.description}`;
         }
+        if (titulo === "RECURSOS ÚTILES") {
+          textoLinea = `• ${item.title}: ${item.url}`;
+        }
         const lineasFragmentadas = doc.splitTextToSize(textoLinea, 175);
         doc.text(lineasFragmentadas, 18, currentY);
         currentY += (lineasFragmentadas.length * 5);
@@ -728,6 +904,8 @@ function downloadSummaryPDF(data) {
   agregarSeccion("DOCUMENTOS BÁSICOS", data.documents, true);
   agregarSeccion("PASOS", data.steps, false);
   agregarSeccion("CANALES DE ATENCIÓN", data.channels, true);
+  agregarSeccion("CHECKLIST", data.checklist, true);
+  agregarSeccion("RECURSOS ÚTILES", data.resources, true);
 
   if (currentY > 260) {
     doc.addPage();

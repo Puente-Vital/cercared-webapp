@@ -44,6 +44,8 @@ function normalizeService(service) {
       },
     ],
     channels: service.channels || [],
+    resources: service.resources || [],
+    checklist: service.checklist || [],
   };
 }
 
