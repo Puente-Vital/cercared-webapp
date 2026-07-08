@@ -1,55 +1,9 @@
-const SERVICE_DRAFTS_KEY = "cercared_admin_service_drafts";
-const CREATED_SERVICES_KEY = "cercared_admin_created_services";
+import { loadServices, saveService, setServiceActive } from "./service-store.js";
 
-function readJson(key, fallback) {
-  try {
-    return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));
-  } catch {
-    return fallback;
-  }
-}
-
-function writeJson(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
-
-function readInitialDrafts() {
-  return readJson(SERVICE_DRAFTS_KEY, {});
-}
-
-function applyInitialDraft(service) {
-  const draft = readInitialDrafts()[service.id] || {};
-  return {
-    ...service,
-    ...draft,
-    requirements: draft.requirements || service.requirements,
-    documents: draft.documents || service.documents,
-    steps: draft.steps || service.steps,
-    channels: draft.channels || service.channels,
-  };
-}
-
-function getCreatedServices() {
-  return readJson(CREATED_SERVICES_KEY, []);
-}
-
-function saveCreatedService(service) {
-  const createdServices = getCreatedServices();
-  const nextServices = [
-    ...createdServices.filter((item) => item.id !== service.id),
-    service,
-  ];
-  writeJson(CREATED_SERVICES_KEY, nextServices);
-}
-
-function getAllServices() {
-  return [...(window.CercaRedServices || []), ...getCreatedServices()].map(applyInitialDraft);
-}
-
-let services = getAllServices();
+let services = [];
 let currentPage = 1;
 const SERVICES_PER_PAGE = 6;
-let currentFilteredServices = [...services]; 
+let currentFilteredServices = [];
 
 const searchForm = document.querySelector("#service-search");
 const searchInput = document.querySelector("#search-input");
@@ -62,7 +16,6 @@ const servicesGrid = document.querySelector("#services-grid");
 const resultsCount = document.querySelector("#results-count");
 const emptyState = document.querySelector("#empty-state");
 const pagination = document.querySelector("#pagination");
-const INACTIVE_SERVICES_KEY = "cercared_inactive_services";
 
 function normalizeText(value) {
   return String(value || "")
@@ -93,29 +46,19 @@ function isAdminUser() {
   return getCurrentUser()?.role === "admin";
 }
 
-function getInactiveServiceIds() {
-  try {
-    return JSON.parse(localStorage.getItem(INACTIVE_SERVICES_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function setInactiveServiceIds(ids) {
-  localStorage.setItem(INACTIVE_SERVICES_KEY, JSON.stringify([...new Set(ids)]));
-}
-
 function isServiceInactive(serviceId) {
-  return getInactiveServiceIds().includes(serviceId);
+  return services.find((service) => service.id === serviceId)?.active === false;
 }
 
-function toggleServiceStatus(serviceId) {
-  const inactiveIds = getInactiveServiceIds();
-  const nextIds = inactiveIds.includes(serviceId)
-    ? inactiveIds.filter((id) => id !== serviceId)
-    : [...inactiveIds, serviceId];
+async function toggleServiceStatus(serviceId) {
+  const service = services.find((item) => item.id === serviceId);
+  if (!service) return;
 
-  setInactiveServiceIds(nextIds);
+  const nextActive = service.active === false;
+  await setServiceActive(serviceId, nextActive);
+  services = services.map((item) =>
+    item.id === serviceId ? { ...item, active: nextActive } : item,
+  );
   applyFilters();
 }
 
@@ -222,6 +165,7 @@ function createServiceFromForm() {
     scope,
     cost,
     officialUrl: officialUrl || "#",
+    active: true,
     requirements: parseSectionItems(document.querySelector("#admin-ai-requirements").value),
     documents: parseSectionItems(document.querySelector("#admin-ai-documents").value),
     steps: parseSectionItems(document.querySelector("#admin-ai-steps").value),
@@ -408,16 +352,17 @@ function openAiServiceModal() {
     }
   });
 
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
       const newService = createServiceFromForm();
-      saveCreatedService(newService);
-      services = getAllServices();
+      await saveService(newService);
+      services = await loadServices();
       closeModal();
       clearFilters();
     } catch (error) {
-      message.textContent = error.message;
+      console.error(error);
+      message.textContent = "No se pudo guardar en Firestore. Revisa permisos de admin.";
     }
   });
 
@@ -569,8 +514,16 @@ servicesGrid.addEventListener("click", (event) => {
   const card = toggleButton.closest(".service-card");
   if (!card?.dataset.serviceId) return;
 
-  toggleServiceStatus(card.dataset.serviceId);
+  toggleServiceStatus(card.dataset.serviceId).catch((error) => {
+    console.error(error);
+  });
 });
 
-renderServices();
-renderAdminCatalogActions();
+async function initCatalog() {
+  services = await loadServices();
+  currentFilteredServices = [...services];
+  renderServices();
+  renderAdminCatalogActions();
+}
+
+initCatalog();

@@ -1,57 +1,13 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, doc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCKV8X6ZDw12oFHyKYSNsnX_HiGRWlbaAQ",
-  authDomain: "cercared-auth.firebaseapp.com",
-  projectId: "cercared-auth",
-  storageBucket: "cercared-auth.firebasestorage.app",
-  messagingSenderId: "303320791334",
-  appId: "1:303320791334:web:4b32a407f6cb0748ae69e7"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { collection, doc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { auth, db, loadServices, setServiceActive } from "./service-store.js";
 
 const root = document.querySelector("#admin-root");
-const serviceDraftsKey = "cercared_admin_service_drafts";
-const createdServicesKey = "cercared_admin_created_services";
-const services = getAllServices().map(applyInitialDraft);
-const inactiveKey = "cercared_inactive_services";
+let services = [];
 let metricsByService = {};
 let searchQuery = "";
 let statusFilter = "all";
 let sortMode = "visits-desc";
-
-function readInitialDrafts() {
-  try {
-    return JSON.parse(localStorage.getItem(serviceDraftsKey) || "{}");
-  } catch {
-    return {};
-  }
-}
-
-function applyInitialDraft(service) {
-  const draft = readInitialDrafts()[service.id] || {};
-  return {
-    ...service,
-    ...draft,
-    requirements: draft.requirements || service.requirements,
-    documents: draft.documents || service.documents,
-    steps: draft.steps || service.steps,
-    channels: draft.channels || service.channels,
-  };
-}
-
-function getCreatedServices() {
-  return readJson(createdServicesKey, []);
-}
-
-function getAllServices() {
-  return [...(window.CercaRedServices || []), ...getCreatedServices()];
-}
 
 function readJson(key, fallback) {
   try {
@@ -59,10 +15,6 @@ function readJson(key, fallback) {
   } catch {
     return fallback;
   }
-}
-
-function writeJson(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
 }
 
 function escapeHtml(value) {
@@ -74,21 +26,16 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function getInactiveIds() {
-  return readJson(inactiveKey, []);
-}
-
 function isInactive(serviceId) {
-  return getInactiveIds().includes(serviceId);
+  return services.find((service) => service.id === serviceId)?.active === false;
 }
 
-function setInactive(serviceId, nextInactive) {
-  const inactiveIds = getInactiveIds();
-  const nextIds = nextInactive
-    ? [...inactiveIds, serviceId]
-    : inactiveIds.filter((id) => id !== serviceId);
-
-  writeJson(inactiveKey, [...new Set(nextIds)]);
+async function setInactive(serviceId, nextInactive) {
+  const nextActive = !nextInactive;
+  await setServiceActive(serviceId, nextActive);
+  services = services.map((service) =>
+    service.id === serviceId ? { ...service, active: nextActive } : service,
+  );
   renderDashboard();
 }
 
@@ -135,7 +82,7 @@ async function loadMetrics() {
 }
 
 function renderStats() {
-  const inactiveCount = getInactiveIds().length;
+  const inactiveCount = services.filter((service) => service.active === false).length;
   const activeCount = services.length - inactiveCount;
   const savedCount = readJson("cercared_saved", []).length;
   const totalVisits = Object.values(metricsByService).reduce(
@@ -319,7 +266,10 @@ function renderDashboard() {
 function wireAdminActions() {
   root.querySelectorAll("[data-admin-toggle]").forEach((button) => {
     button.addEventListener("click", () => {
-      setInactive(button.dataset.adminToggle, !isInactive(button.dataset.adminToggle));
+      setInactive(button.dataset.adminToggle, !isInactive(button.dataset.adminToggle)).catch((error) => {
+        console.error(error);
+        showState("No se pudo actualizar", "Firestore rechazó el cambio. Revisa que tu usuario tenga role admin.");
+      });
     });
   });
 
@@ -359,6 +309,7 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
 
+    services = await loadServices();
     await loadMetrics();
     renderDashboard();
   } catch (error) {

@@ -1,30 +1,11 @@
-// ==========================================================================
-// IMPORTACIONES E INICIALIZACIÓN DE FIREBASE CORE
-// ==========================================================================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, setDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCKV8X6ZDw12oFHyKYSNsnX_HiGRWlbaAQ",
-  authDomain: "cercared-auth.firebaseapp.com",
-  projectId: "cercared-auth",
-  storageBucket: "cercared-auth.firebasestorage.app",
-  messagingSenderId: "303320791334",
-  appId: "1:303320791334:web:4b32a407f6cb0748ae69e7"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+import { doc, increment, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { db, loadServices, setServiceActive, updateService } from "./service-store.js";
 
 // CONFIGURACIÓN DINÁMICA DE PARÁMETROS URL
 const detailRoot = document.querySelector("#service-detail");
 const params = new URLSearchParams(window.location.search);
 const serviceId = params.get("id") || "pension-65";
-const INACTIVE_SERVICES_KEY = "cercared_inactive_services";
-const SERVICE_DRAFTS_KEY = "cercared_admin_service_drafts";
-const CREATED_SERVICES_KEY = "cercared_admin_created_services";
-const rawService = getAllServices().find((item) => item.id === serviceId);
-const service = rawService ? applyServiceDraft(rawService) : null;
+let rawService = null;
 
 function getCurrentUser() {
   try {
@@ -38,38 +19,6 @@ function isAdminUser() {
   return getCurrentUser()?.role === "admin";
 }
 
-function getInactiveServiceIds() {
-  try {
-    return JSON.parse(localStorage.getItem(INACTIVE_SERVICES_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function setInactiveServiceIds(ids) {
-  localStorage.setItem(INACTIVE_SERVICES_KEY, JSON.stringify([...new Set(ids)]));
-}
-
-function readJson(key, fallback) {
-  try {
-    return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));
-  } catch {
-    return fallback;
-  }
-}
-
-function writeJson(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
-
-function getCreatedServices() {
-  return readJson(CREATED_SERVICES_KEY, []);
-}
-
-function getAllServices() {
-  return [...(window.CercaRedServices || []), ...getCreatedServices()];
-}
-
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -77,26 +26,6 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
-}
-
-function getServiceDrafts() {
-  return readJson(SERVICE_DRAFTS_KEY, {});
-}
-
-function getServiceDraft(serviceData) {
-  return getServiceDrafts()[serviceData.id] || {};
-}
-
-function applyServiceDraft(serviceData) {
-  const draft = getServiceDraft(serviceData);
-  return {
-    ...serviceData,
-    ...draft,
-    requirements: draft.requirements || serviceData.requirements,
-    documents: draft.documents || serviceData.documents,
-    steps: draft.steps || serviceData.steps,
-    channels: draft.channels || serviceData.channels,
-  };
 }
 
 function formatSectionItems(items) {
@@ -119,34 +48,16 @@ function parseSectionItems(value) {
     });
 }
 
-function saveServiceDraft(serviceData, draft) {
-  const drafts = getServiceDrafts();
-  drafts[serviceData.id] = {
-    ...draft,
-    updatedAt: new Date().toISOString(),
-  };
-  writeJson(SERVICE_DRAFTS_KEY, drafts);
-}
-
-function resetServiceDraft(serviceData) {
-  const drafts = getServiceDrafts();
-  delete drafts[serviceData.id];
-  writeJson(SERVICE_DRAFTS_KEY, drafts);
-}
-
 function isServiceInactive(serviceData) {
-  return getInactiveServiceIds().includes(serviceData.id);
+  return serviceData.active === false;
 }
 
-function toggleServiceStatus(serviceData) {
-  const inactiveIds = getInactiveServiceIds();
-  const nextIds = inactiveIds.includes(serviceData.id)
-    ? inactiveIds.filter((id) => id !== serviceData.id)
-    : [...inactiveIds, serviceData.id];
-
-  setInactiveServiceIds(nextIds);
-  showDetailToast(nextIds.includes(serviceData.id) ? "Servicio desactivado" : "Servicio activado");
-  renderServiceDetail(serviceData);
+async function toggleServiceStatus(serviceData) {
+  const nextActive = serviceData.active === false;
+  await setServiceActive(serviceData.id, nextActive);
+  rawService = { ...serviceData, active: nextActive };
+  showDetailToast(nextActive ? "Servicio activado" : "Servicio desactivado");
+  renderServiceDetail(rawService);
 }
 
 // ==========================================================================
@@ -215,7 +126,7 @@ function renderAdminEditor(data) {
           <p>Administración</p>
           <h2 id="admin-editor-title">Editar contenido del servicio</h2>
         </div>
-        <span>${getServiceDraft(data).updatedAt ? "Borrador local guardado" : "Sin borrador"}</span>
+        <span>Guardado en Firestore</span>
       </div>
       <form class="admin-service-form" id="admin-service-form">
         <label>
@@ -250,8 +161,8 @@ function renderAdminEditor(data) {
           Escribe cada elemento en una línea usando el formato: Título | Descripción.
         </p>
         <div class="admin-service-form-actions">
-          <button type="submit">Guardar borrador</button>
-          <button type="button" id="admin-reset-draft">Restablecer original</button>
+          <button type="submit">Guardar cambios</button>
+          <button type="button" id="admin-reset-draft">Restablecer formulario</button>
         </div>
         <p class="admin-editor-message" id="admin-editor-message" aria-live="polite"></p>
       </form>
@@ -487,12 +398,15 @@ function wireDetailActions(data) {
   summaryButton.addEventListener("click", () => openSummaryModal(data));
 
   adminToggleButton?.addEventListener("click", () => {
-    toggleServiceStatus(data);
+    toggleServiceStatus(data).catch((error) => {
+      console.error(error);
+      showDetailToast("No se pudo cambiar el estado");
+    });
   });
 
-  adminForm?.addEventListener("submit", (event) => {
+  adminForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const draft = {
+    const updates = {
       name: document.querySelector("#admin-edit-name").value.trim() || data.name,
       description: document.querySelector("#admin-edit-description").value.trim() || data.description,
       shortDescription: document.querySelector("#admin-edit-short-description").value.trim() || data.shortDescription,
@@ -502,16 +416,21 @@ function wireDetailActions(data) {
       channels: parseSectionItems(document.querySelector("#admin-edit-channels").value),
     };
 
-    saveServiceDraft(data, draft);
-    showDetailToast("Borrador guardado");
-    renderServiceDetail(applyServiceDraft(rawService));
-    document.querySelector("#admin-service-editor")?.scrollIntoView({ behavior: "smooth" });
+    try {
+      await updateService(data.id, updates);
+      rawService = { ...data, ...updates };
+      showDetailToast("Cambios guardados");
+      renderServiceDetail(rawService);
+      document.querySelector("#admin-service-editor")?.scrollIntoView({ behavior: "smooth" });
+    } catch (error) {
+      console.error(error);
+      showDetailToast("No se pudo guardar en Firestore");
+    }
   });
 
   adminResetButton?.addEventListener("click", () => {
-    resetServiceDraft(data);
-    showDetailToast("Contenido original restablecido");
-    renderServiceDetail(rawService);
+    showDetailToast("Formulario restablecido");
+    renderServiceDetail(data);
     document.querySelector("#admin-service-editor")?.scrollIntoView({ behavior: "smooth" });
   });
 }
@@ -752,9 +671,16 @@ async function trackServiceVisit(serviceData) {
 // ==========================================================================
 // FLUJO DE INICIALIZACIÓN DE LA PÁGINA
 // ==========================================================================
-if (service && (isAdminUser() || !isServiceInactive(service))) {
-  renderServiceDetail(service);
-  trackServiceVisit(service); // <-- DISPARADOR AUTOMÁTICO SILENCIOSO DE MÉTRICAS
-} else {
-  renderNotFound();
+async function initDetail() {
+  const services = await loadServices();
+  rawService = services.find((item) => item.id === serviceId);
+
+  if (rawService && (isAdminUser() || !isServiceInactive(rawService))) {
+    renderServiceDetail(rawService);
+    trackServiceVisit(rawService); // <-- DISPARADOR AUTOMÁTICO SILENCIOSO DE MÉTRICAS
+  } else {
+    renderNotFound();
+  }
 }
+
+initDetail();
