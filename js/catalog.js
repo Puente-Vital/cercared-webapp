@@ -716,7 +716,30 @@ servicesGrid.addEventListener("click", (event) => {
 async function initCatalog() {
   services = await loadServices();
   currentFilteredServices = [...services];
-  renderServices();
+  
+  try {
+    const sessionUser = JSON.parse(localStorage.getItem("cercared_currentUser"));
+    if (sessionUser && sessionUser.preferences) {
+      const prefs = sessionUser.preferences;
+      
+      if (prefs.viewMode === 'simple') {
+        document.body.classList.add('view-mode-simple');
+      }
+      
+      if (prefs.district && districtFilter) {
+        districtFilter.value = prefs.district;
+        districtFilter.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      if (prefs.category && categoryFilter) {
+        categoryFilter.value = prefs.category;
+        categoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
+  } catch (err) {
+    console.error("Error al cargar las preferencias por defecto:", err);
+  }
+
+  applyFilters();
   renderAdminCatalogActions();
 }
 

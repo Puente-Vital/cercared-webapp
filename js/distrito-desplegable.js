@@ -1,4 +1,3 @@
-
 (function () {
   function enhance(select) {
     if (!select || select.dataset.enhanced) return;
@@ -52,11 +51,14 @@
     wrap.appendChild(btn);
     wrap.appendChild(panel);
     sync();
+
+    select.addEventListener("change", sync);
+
     ["#clear-filters", "#empty-clear-search"].forEach(function (sel) {
       const b = document.querySelector(sel);
       if (b) b.addEventListener("click", function () { setTimeout(sync, 0); });
     });
   }
 
-  document.querySelectorAll(".filters select").forEach(enhance);
+  document.querySelectorAll(".filters select, select.form-input").forEach(enhance);
 })();
