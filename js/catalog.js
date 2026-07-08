@@ -1,4 +1,7 @@
 const services = window.CercaRedServices || [];
+let currentPage = 1;
+const SERVICES_PER_PAGE = 6;
+let currentFilteredServices = [...services]; 
 
 const searchForm = document.querySelector("#service-search");
 const searchInput = document.querySelector("#search-input");
@@ -44,29 +47,66 @@ function createServiceCard(service) {
   return article;
 }
 
-function renderServices(filteredServices) {
+function renderServices() {
+
+  const startIndex = (currentPage - 1) * SERVICES_PER_PAGE;
+  const endIndex = startIndex + SERVICES_PER_PAGE;
+  const servicesToRender = currentFilteredServices.slice(startIndex, endIndex);
+
+  // 2. Pintar las tarjetas correspondientes a la página actual
   servicesGrid.replaceChildren(
-    ...filteredServices.map((service) => createServiceCard(service)),
+    ...servicesToRender.map((service) => createServiceCard(service)),
   );
 
-  const hasResults = filteredServices.length > 0;
+  const hasResults = currentFilteredServices.length > 0;
   servicesGrid.hidden = !hasResults;
   emptyState.hidden = hasResults;
   pagination.hidden = !hasResults;
 
   if (!hasResults) {
     resultsCount.textContent = "";
+    pagination.replaceChildren(); 
     return;
   }
 
   const serviceLabel =
-    filteredServices.length === 1 ? "servicio disponible" : "servicios disponibles";
-  resultsCount.textContent = `Mostrando ${filteredServices.length} ${serviceLabel}`;
+    currentFilteredServices.length === 1 ? "servicio disponible" : "servicios disponibles";
+  resultsCount.textContent = `Mostrando ${currentFilteredServices.length} ${serviceLabel}`;
+
+  renderPaginationControls();
+}
+
+function renderPaginationControls() {
+  const totalPages = Math.ceil(currentFilteredServices.length / SERVICES_PER_PAGE);
+  pagination.replaceChildren(); // Limpiar botones viejos
+
+  if (totalPages <= 1) {
+    pagination.hidden = true;
+    return;
+  }
+
+  pagination.hidden = false;
+
+  for (let i = 1; i <= totalPages; i++) {
+    const pageButton = document.createElement("button");
+    pageButton.type = "button";
+    pageButton.textContent = i;
+    pageButton.className = i === currentPage ? "page-button active" : "page-button";
+    
+    pageButton.addEventListener("click", () => {
+      currentPage = i;
+      renderServices();
+      window.scrollTo({ top: servicesGrid.offsetTop - 100, behavior: 'smooth' });
+    });
+
+    pagination.appendChild(pageButton);
+  }
 }
 
 function applyFilters() {
   const normalizedQuery = normalizeText(searchInput.value);
-  const filteredServices = services.filter((service) => {
+  
+  currentFilteredServices = services.filter((service) => {
     const searchableContent = [
       service.name,
       service.entity,
@@ -93,7 +133,8 @@ function applyFilters() {
     );
   });
 
-  renderServices(filteredServices);
+  currentPage = 1;
+  renderServices();
 }
 
 function clearFilters() {
@@ -101,7 +142,9 @@ function clearFilters() {
   categoryFilter.value = "";
   districtFilter.value = "";
   modalityFilter.value = "";
-  renderServices(services);
+  currentFilteredServices = [...services];
+  currentPage = 1;
+  renderServices();
   searchInput.focus();
 }
 
@@ -117,4 +160,4 @@ searchForm.addEventListener("submit", (event) => {
 clearFiltersButton.addEventListener("click", clearFilters);
 emptyClearButton.addEventListener("click", clearFilters);
 
-renderServices(services);
+renderServices();
