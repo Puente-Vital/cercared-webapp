@@ -63,6 +63,39 @@
           Explora servicios por categoría o ubicación.
         </p>
       </section>
+      <section class="user-activity-summary" id="activity-summary" hidden>
+        <div class="summary-card">
+          <h3>Mi Actividad Reciente</h3>
+          <div class="summary-grid">
+            
+            <!-- Bloque 1: Servicios Guardados -->
+            <div class="summary-item" id="summary-saved-box">
+              <img src="assets/icons/menu.svg" alt="" aria-hidden="true" class="summary-icon"/>
+              <div>
+                <span class="summary-label">Servicios guardados</span>
+                <p class="summary-value" id="saved-count-text">0 servicios</p>
+              </div>
+            </div>
+
+            <!-- Bloque 2: Último servicio visitado -->
+            <div class="summary-item" id="summary-last-visited-box">
+              <img src="assets/icons/search.svg" alt="" aria-hidden="true" class="summary-icon"/>
+              <div>
+                <span class="summary-label">Último visitado</span>
+                <p class="summary-value" id="last-visited-text">Ninguno recientemente</p>
+              </div>
+            </div>
+
+            <div class="summary-item suggestion-item" id="summary-suggestion-box">
+              <div>
+                <span class="summary-label">Sugerencia para continuar</span>
+                <a href="#" id="suggestion-link" class="summary-link">Explorar más servicios</a>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
 
       <section class="search-section" aria-label="Búsqueda de servicios">
         <form class="search-form" id="service-search" role="search">

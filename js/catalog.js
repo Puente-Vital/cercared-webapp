@@ -744,3 +744,40 @@ async function initCatalog() {
 }
 
 initCatalog();
+
+function loadUserActivitySummary() {
+  const section = document.getElementById('activity-summary');
+  const txtLastVisited = document.getElementById('last-visited-text');
+  const txtSavedCount = document.getElementById('saved-count-text');
+  const linkSuggestion = document.getElementById('suggestion-link');
+
+  if (section) section.removeAttribute('hidden');
+
+  const savedServices = window.CercaRedSaved ? window.CercaRedSaved.getSaved() : [];
+  const lastVisited = JSON.parse(localStorage.getItem('cercared_last_visited'));
+
+  if (txtSavedCount) {
+    txtSavedCount.textContent = `${savedServices.length} ${savedServices.length === 1 ? 'servicio' : 'servicios'}`;
+  }
+
+  if (lastVisited) {
+    if (txtLastVisited) txtLastVisited.textContent = lastVisited.name;
+    if (linkSuggestion) {
+      linkSuggestion.textContent = `Ver más de ${lastVisited.category}`;
+      linkSuggestion.href = "#"; 
+
+      linkSuggestion.addEventListener("click", (e) => {
+        e.preventDefault();
+        
+        const categoryFilter = document.getElementById("category-filter");
+        if (categoryFilter) {
+          categoryFilter.value = lastVisited.category;
+          
+          categoryFilter.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      });
+    }
+  }
+}
+
+loadUserActivitySummary();
