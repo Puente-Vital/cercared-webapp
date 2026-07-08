@@ -1,4 +1,26 @@
-const services = window.CercaRedServices || [];
+const SERVICE_DRAFTS_KEY = "cercared_admin_service_drafts";
+
+function readInitialDrafts() {
+  try {
+    return JSON.parse(localStorage.getItem(SERVICE_DRAFTS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function applyInitialDraft(service) {
+  const draft = readInitialDrafts()[service.id] || {};
+  return {
+    ...service,
+    ...draft,
+    requirements: draft.requirements || service.requirements,
+    documents: draft.documents || service.documents,
+    steps: draft.steps || service.steps,
+    channels: draft.channels || service.channels,
+  };
+}
+
+const services = (window.CercaRedServices || []).map(applyInitialDraft);
 let currentPage = 1;
 const SERVICES_PER_PAGE = 6;
 let currentFilteredServices = [...services]; 
@@ -70,8 +92,10 @@ function createServiceCard(service) {
 
   article.innerHTML = `
     <div class="service-card-header">
-      <span class="service-category">${service.category}</span>
-      ${isAdminUser() ? `<span class="service-status">${isInactive ? "Inactivo" : "Activo"}</span>` : ""}
+      <div class="service-card-tags">
+        <span class="service-category">${service.category}</span>
+        ${isAdminUser() ? `<span class="service-status">${isInactive ? "Inactivo" : "Activo"}</span>` : ""}
+      </div>
       <button class="save-button" type="button" aria-label="Guardar ${service.name}">
         <img src="assets/icons/save.svg" alt="" aria-hidden="true">
       </button>
