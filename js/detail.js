@@ -476,6 +476,13 @@ function renderServiceDetail(data) {
           </dl>
         </section>
 
+        <section class="sidebar-card sidebar-channels-card" aria-labelledby="sidebar-channels-title">
+          <h2 id="sidebar-channels-title">Canales de atención</h2>
+          <ul class="channels-list">
+            ${renderChannels(data.channels)}
+          </ul>
+        </section>
+
         <section class="sidebar-card summary-card">
           <h2>Resumen del trámite</h2>
           <p>
@@ -483,13 +490,6 @@ function renderServiceDetail(data) {
             para acceder a ${data.name}, lista para compartir con tu familiar.
           </p>
           <button class="summary-button" type="button">Generar resumen</button>
-        </section>
-
-        <section class="sidebar-card sidebar-channels-card" aria-labelledby="sidebar-channels-title">
-          <h2 id="sidebar-channels-title">Canales de atención</h2>
-          <ul class="channels-list">
-            ${renderChannels(data.channels)}
-          </ul>
         </section>
 
         <div class="sidebar-actions">
