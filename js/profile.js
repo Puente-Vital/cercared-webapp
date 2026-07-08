@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
       name: cachedUser.name || "Usuario de CercaRed",
       email: cachedUser.email || "",
       avatar: cachedUser.avatar || null,
+      role: cachedUser.role || "user",
       preferences: cachedUser.preferences || { district: "", category: "", fontSize: "normal", viewMode: "normal" }
     };
     
@@ -97,6 +98,7 @@ onAuthStateChanged(auth, async (user) => {
           uid: user.uid,
           name: firestoreData.name || user.displayName || "Usuario de CercaRed",
           email: user.email,
+          role: firestoreData.role || "user",
           avatar: firestoreData.avatar || null,
           preferences: firestoreData.preferences || { district: "", category: "", fontSize: "normal", viewMode: "normal" }
         };
@@ -105,12 +107,14 @@ onAuthStateChanged(auth, async (user) => {
           uid: user.uid,
           name: user.displayName || "Usuario de CercaRed",
           email: user.email,
+          role: "user",
           avatar: null,
           preferences: { district: "", category: "", fontSize: "normal", viewMode: "normal" }
         };
       }
 
       renderProfileView();
+      localStorage.setItem('cercared_currentUser', JSON.stringify(currentUser));
       renderSavedStats();
       sincronizarPreferenciasEnPantalla();
       configurarSeccionContrasena(user);

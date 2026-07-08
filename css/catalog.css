@@ -246,6 +246,11 @@ body {
   background: var(--color-surface);
 }
 
+.service-card.is-inactive {
+  border-style: dashed;
+  opacity: 0.72;
+}
+
 .service-card-header {
   display: flex;
   align-items: flex-start;
@@ -263,6 +268,25 @@ body {
   font-size: 14px;
   font-weight: 600;
   line-height: 20px;
+}
+
+.service-status {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 32px;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: var(--color-success);
+  background: #ecfdf3;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.service-card.is-inactive .service-status {
+  color: var(--color-error);
+  background: #fff1f2;
 }
 
 .save-button {
@@ -356,6 +380,41 @@ body {
 .share-button:hover,
 .share-button:focus-visible {
   background: var(--color-soft);
+}
+
+.admin-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.admin-card-actions a,
+.admin-card-actions button {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-accent);
+  border-radius: 10px;
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.admin-card-actions button {
+  color: var(--color-accent);
+  background: var(--color-surface);
+}
+
+.admin-card-actions a:hover,
+.admin-card-actions a:focus-visible {
+  background: var(--color-accent-hover);
+}
+
+.admin-card-actions button:hover,
+.admin-card-actions button:focus-visible {
+  background: #fff7ed;
 }
 
 .empty-state {

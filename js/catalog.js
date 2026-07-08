@@ -14,6 +14,7 @@ const servicesGrid = document.querySelector("#services-grid");
 const resultsCount = document.querySelector("#results-count");
 const emptyState = document.querySelector("#empty-state");
 const pagination = document.querySelector("#pagination");
+const INACTIVE_SERVICES_KEY = "cercared_inactive_services";
 
 function normalizeText(value) {
   return value
@@ -23,14 +24,54 @@ function normalizeText(value) {
     .trim();
 }
 
+function getCurrentUser() {
+  try {
+    return JSON.parse(localStorage.getItem("cercared_currentUser") || "null");
+  } catch {
+    return null;
+  }
+}
+
+function isAdminUser() {
+  return getCurrentUser()?.role === "admin";
+}
+
+function getInactiveServiceIds() {
+  try {
+    return JSON.parse(localStorage.getItem(INACTIVE_SERVICES_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function setInactiveServiceIds(ids) {
+  localStorage.setItem(INACTIVE_SERVICES_KEY, JSON.stringify([...new Set(ids)]));
+}
+
+function isServiceInactive(serviceId) {
+  return getInactiveServiceIds().includes(serviceId);
+}
+
+function toggleServiceStatus(serviceId) {
+  const inactiveIds = getInactiveServiceIds();
+  const nextIds = inactiveIds.includes(serviceId)
+    ? inactiveIds.filter((id) => id !== serviceId)
+    : [...inactiveIds, serviceId];
+
+  setInactiveServiceIds(nextIds);
+  applyFilters();
+}
+
 function createServiceCard(service) {
+  const isInactive = isServiceInactive(service.id);
   const article = document.createElement("article");
-  article.className = "service-card";
+  article.className = `service-card${isInactive ? " is-inactive" : ""}`;
   article.dataset.serviceId = service.id;
 
   article.innerHTML = `
     <div class="service-card-header">
       <span class="service-category">${service.category}</span>
+      ${isAdminUser() ? `<span class="service-status">${isInactive ? "Inactivo" : "Activo"}</span>` : ""}
       <button class="save-button" type="button" aria-label="Guardar ${service.name}">
         <img src="assets/icons/save.svg" alt="" aria-hidden="true">
       </button>
@@ -41,6 +82,14 @@ function createServiceCard(service) {
     <div class="card-actions">
       <a class="details-button" href="detail.html?id=${service.id}">Ver requisitos</a>
       <button class="share-button" type="button">Compartir</button>
+      ${isAdminUser() ? `
+        <div class="admin-card-actions" aria-label="Acciones administrativas">
+          <a href="admin.html?service=${service.id}">Editar</a>
+          <button type="button" data-admin-action="toggle-status">
+            ${isInactive ? "Activar" : "Desactivar"}
+          </button>
+        </div>
+      ` : ""}
     </div>
   `;
 
@@ -107,6 +156,8 @@ function applyFilters() {
   const normalizedQuery = normalizeText(searchInput.value);
   
   currentFilteredServices = services.filter((service) => {
+    if (!isAdminUser() && isServiceInactive(service.id)) return false;
+
     const searchableContent = [
       service.name,
       service.entity,
@@ -142,9 +193,8 @@ function clearFilters() {
   categoryFilter.value = "";
   districtFilter.value = "";
   modalityFilter.value = "";
-  currentFilteredServices = [...services];
   currentPage = 1;
-  renderServices();
+  applyFilters();
   searchInput.focus();
 }
 
@@ -159,5 +209,15 @@ searchForm.addEventListener("submit", (event) => {
 
 clearFiltersButton.addEventListener("click", clearFilters);
 emptyClearButton.addEventListener("click", clearFilters);
+
+servicesGrid.addEventListener("click", (event) => {
+  const toggleButton = event.target.closest('[data-admin-action="toggle-status"]');
+  if (!toggleButton || !isAdminUser()) return;
+
+  const card = toggleButton.closest(".service-card");
+  if (!card?.dataset.serviceId) return;
+
+  toggleServiceStatus(card.dataset.serviceId);
+});
 
 renderServices();

@@ -10,7 +10,7 @@ import {
   sendEmailVerification
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-import { getFirestore, doc, setDoc, getDocs, collection, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 const firebaseConfig = {
   apiKey: "AIzaSyCKV8X6ZDw12oFHyKYSNsnX_HiGRWlbaAQ",
   authDomain: "cercared-auth.firebaseapp.com",
@@ -24,6 +24,31 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
+
+async function getUserProfile(user) {
+  const userDocRef = doc(db, "users", user.uid);
+  const docSnap = await getDoc(userDocRef);
+  const firestoreData = docSnap.exists() ? docSnap.data() : {};
+
+  return {
+    uid: user.uid,
+    name: firestoreData.name || user.displayName || "Usuario",
+    email: user.email,
+    source: firestoreData.source || "manual",
+    role: firestoreData.role || "user",
+    avatar: firestoreData.avatar || null,
+    preferences: firestoreData.preferences || undefined
+  };
+}
+
+async function storeCurrentUser(user, source) {
+  const currentUserData = await getUserProfile(user);
+  currentUserData.source = source || currentUserData.source;
+  localStorage.setItem('cercared_currentUser', JSON.stringify(currentUserData));
+  localStorage.setItem('cercared_has_session', 'true');
+  window.CercaRedNavbar?.updateAuthLink();
+  return currentUserData;
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   const loginView = document.getElementById('loginView');
@@ -116,16 +141,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (isValid) {
       signInWithEmailAndPassword(auth, emailValue, passwordValue)
-        .then((result) => {
+        .then(async (result) => {
           const user = result.user;
-          const currentUserData = {
-            name: user.displayName || "Usuario",
-            email: user.email,
-            source: 'manual'
-          };
-          
-          localStorage.setItem('cercared_currentUser', JSON.stringify(currentUserData));
-          window.CercaRedNavbar?.updateAuthLink();
+          const currentUserData = await storeCurrentUser(user, 'manual');
           loginForm.reset();
           
           const successMsg = document.getElementById('successMessage');
@@ -226,6 +244,8 @@ if (nameValue === "") {
             await setDoc(doc(db, "users", user.uid), {
               name: nameValue,
               email: emailValue,
+              source: 'manual',
+              role: 'user',
               createdAt: new Date()
             });
 
@@ -237,9 +257,11 @@ if (nameValue === "") {
             console.log("Correo de verificación enviado.");
 
             const currentUserData = {
+              uid: user.uid,
               name: nameValue,
               email: emailValue,
-              source: 'manual'
+              source: 'manual',
+              role: 'user'
             };
             localStorage.setItem('cercared_currentUser', JSON.stringify(currentUserData));
             window.CercaRedNavbar?.updateAuthLink();
@@ -368,9 +390,22 @@ if (nameValue === "") {
   const iniciarFlujoFirebaseGoogle = (e) => {
     e.preventDefault();
     signInWithPopup(auth, provider)
-      .then((result) => {
+      .then(async (result) => {
         const user = result.user;
-        const googleUser = { name: user.displayName, email: user.email, source: 'google' };
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
+          await setDoc(userDocRef, {
+            name: user.displayName || "Usuario",
+            email: user.email,
+            source: 'google',
+            role: 'user',
+            createdAt: new Date()
+          });
+        }
+
+        const googleUser = await storeCurrentUser(user, 'google');
         localStorage.setItem('cercared_currentUser', JSON.stringify(googleUser));
         window.CercaRedNavbar?.updateAuthLink();
 
