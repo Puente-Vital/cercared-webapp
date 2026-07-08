@@ -25,16 +25,22 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-async function getUserProfile(user) {
-  const userDocRef = doc(db, "users", user.uid);
-  const docSnap = await getDoc(userDocRef);
-  const firestoreData = docSnap.exists() ? docSnap.data() : {};
+async function getUserProfile(user, source = "manual") {
+  let firestoreData = {};
+
+  try {
+    const userDocRef = doc(db, "users", user.uid);
+    const docSnap = await getDoc(userDocRef);
+    firestoreData = docSnap.exists() ? docSnap.data() : {};
+  } catch (error) {
+    console.warn("No se pudo leer el perfil en Firestore. Se usará el perfil de Auth.", error);
+  }
 
   return {
     uid: user.uid,
     name: firestoreData.name || user.displayName || "Usuario",
     email: user.email,
-    source: firestoreData.source || "manual",
+    source: firestoreData.source || source,
     role: firestoreData.role || "user",
     avatar: firestoreData.avatar || null,
     preferences: firestoreData.preferences || undefined
@@ -42,7 +48,7 @@ async function getUserProfile(user) {
 }
 
 async function storeCurrentUser(user, source) {
-  const currentUserData = await getUserProfile(user);
+  const currentUserData = await getUserProfile(user, source);
   currentUserData.source = source || currentUserData.source;
   localStorage.setItem('cercared_currentUser', JSON.stringify(currentUserData));
   localStorage.setItem('cercared_has_session', 'true');
@@ -392,21 +398,27 @@ if (nameValue === "") {
     signInWithPopup(auth, provider)
       .then(async (result) => {
         const user = result.user;
-        const userDocRef = doc(db, "users", user.uid);
-        const userDoc = await getDoc(userDocRef);
+        let googleUser = await storeCurrentUser(user, 'google');
 
-        if (!userDoc.exists()) {
-          await setDoc(userDocRef, {
-            name: user.displayName || "Usuario",
-            email: user.email,
-            source: 'google',
-            role: 'user',
-            createdAt: new Date()
-          });
+        try {
+          const userDocRef = doc(db, "users", user.uid);
+          const userDoc = await getDoc(userDocRef);
+
+          if (!userDoc.exists()) {
+            await setDoc(userDocRef, {
+              name: user.displayName || "Usuario",
+              email: user.email,
+              source: 'google',
+              role: 'user',
+              createdAt: new Date()
+            });
+          }
+
+          googleUser = await storeCurrentUser(user, 'google');
+        } catch (firestoreError) {
+          console.warn("Sesión iniciada, pero no se pudo sincronizar el usuario en Firestore:", firestoreError);
         }
 
-        const googleUser = await storeCurrentUser(user, 'google');
-        localStorage.setItem('cercared_currentUser', JSON.stringify(googleUser));
         window.CercaRedNavbar?.updateAuthLink();
 
         const successMsg = document.getElementById('successMessage');
