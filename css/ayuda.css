@@ -45,6 +45,19 @@
   margin: 0 auto;
 }
 
+/* Asegurar que el label sea invisible (por si base.css no lo define) */
+.faq-search-wrapper .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .faq-search-field {
   display: flex;
   align-items: center;
@@ -75,6 +88,9 @@
   color: var(--color-primary);
   min-height: 36px;
   outline: none;
+  box-shadow: none;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .faq-search-field input::placeholder {
