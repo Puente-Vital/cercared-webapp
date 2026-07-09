@@ -1,3 +1,4 @@
+import { openConfirmDialog } from "./confirm-dialog.js";
 import { loadServices, saveService, setServiceActive } from "./service-store.js";
 
 let services = [];
@@ -562,10 +563,22 @@ function openAiServiceModal() {
     document.body.classList.remove("has-admin-ai-modal");
   };
 
-  const closeWithConfirmation = () => {
+  const closeWithConfirmation = async () => {
     const hasContent = Array.from(modal.querySelectorAll("input, textarea"))
       .some((field) => field.type === "file" ? field.files?.length : field.value.trim());
-    if (!hasContent || window.confirm("Hay información sin guardar. ¿Cerrar de todos modos?")) {
+    if (!hasContent) {
+      closeModal();
+      return;
+    }
+
+    const shouldClose = await openConfirmDialog({
+      title: "Cerrar sin guardar",
+      message: "Hay información sin guardar. Si cierras ahora, perderás los cambios de este borrador.",
+      confirmText: "Cerrar sin guardar",
+      cancelText: "Seguir editando",
+    });
+
+    if (shouldClose) {
       closeModal();
     }
   };

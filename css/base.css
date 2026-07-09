@@ -87,3 +87,105 @@ main {
 main section {
   min-height: 1px;
 }
+
+body.has-app-dialog {
+  overflow: hidden;
+}
+
+.app-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.app-confirm-dialog {
+  width: min(100%, 480px);
+  padding: var(--space-5);
+  border: 1px solid rgba(249, 115, 22, 0.22);
+  border-radius: 20px;
+  background: var(--color-surface);
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.2);
+}
+
+.app-confirm-eyebrow {
+  margin: 0 0 var(--space-2);
+  color: var(--color-accent);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.app-confirm-dialog h2 {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text);
+  font-size: 30px;
+  line-height: 1.15;
+}
+
+.app-confirm-message {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.app-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.app-confirm-actions button {
+  min-height: 48px;
+  padding: 0 var(--space-4);
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.app-confirm-cancel {
+  color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+.app-confirm-cancel:hover,
+.app-confirm-cancel:focus-visible {
+  background: var(--color-soft);
+}
+
+.app-confirm-accept {
+  border-color: var(--color-accent) !important;
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+}
+
+.app-confirm-accept:hover,
+.app-confirm-accept:focus-visible {
+  background: var(--color-accent-hover);
+}
+
+@media (max-width: 640px) {
+  .app-confirm-dialog {
+    padding: var(--space-4);
+  }
+
+  .app-confirm-dialog h2 {
+    font-size: 24px;
+  }
+
+  .app-confirm-actions {
+    flex-direction: column-reverse;
+  }
+
+  .app-confirm-actions button {
+    width: 100%;
+  }
+}
