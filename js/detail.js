@@ -5,6 +5,7 @@ const detailRoot = document.querySelector("#service-detail");
 const params = new URLSearchParams(window.location.search);
 const serviceId = params.get("id") || "pension-65";
 let rawService = null;
+const MAX_IMAGE_SIZE_BYTES = 350_000;
 
 function getCurrentUser() {
   try {
@@ -16,6 +17,73 @@ function getCurrentUser() {
 
 function isAdminUser() {
   return getCurrentUser()?.role === "admin";
+}
+
+function getImageHelpers() {
+  return window.CercaRedServiceImages || {};
+}
+
+function readImageFile(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve("");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("Adjunta una imagen en formato JPG, PNG, WebP o SVG."));
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      reject(new Error("La imagen supera 350 KB. Usa un archivo más liviano."));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(new Error("No se pudo leer la imagen seleccionada."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function getServiceImageMarkup(service, className, alt) {
+  const candidates = getImageHelpers().getServiceImageCandidates?.(service) || ["assets/images/cards/default.svg"];
+  const escapedSources = escapeHtml(JSON.stringify(candidates));
+
+  return `
+    <img
+      class="${className}"
+      src="${escapeHtml(candidates[0])}"
+      alt="${escapeHtml(alt)}"
+      data-image-candidates="${escapedSources}"
+    />
+  `;
+}
+
+function wireImageFallbacks(root = document) {
+  const helpers = getImageHelpers();
+  root.querySelectorAll("[data-image-candidates]").forEach((img) => {
+    try {
+      const candidates = JSON.parse(img.dataset.imageCandidates || "[]");
+      helpers.attachFallback?.(img, candidates);
+    } catch {
+      // Keep the original src if dataset parsing fails.
+    }
+  });
+}
+
+function updateImagePreview(preview, serviceLike) {
+  if (!preview) return;
+
+  const candidates = getImageHelpers().getServiceImageCandidates?.(serviceLike) || ["assets/images/cards/default.svg"];
+  preview.alt = serviceLike?.name
+    ? `Vista previa de ${serviceLike.name}`
+    : "Vista previa de la imagen del servicio";
+  getImageHelpers().attachFallback?.(preview, candidates);
+  if (!preview.src) {
+    preview.src = candidates[0];
+  }
 }
 
 function escapeHtml(value) {
@@ -304,6 +372,20 @@ function renderAdminEditor(data) {
           Título
           <input id="admin-edit-name" type="text" value="${escapeHtml(data.name)}" />
         </label>
+        <section class="admin-image-field" aria-labelledby="admin-image-title">
+          <div class="admin-image-field-copy">
+            <p id="admin-image-title">Imagen del servicio</p>
+            <span>Sube una nueva portada o conserva la imagen actual.</span>
+          </div>
+          <div class="admin-image-field-layout">
+            ${getServiceImageMarkup(data, "admin-service-image-preview", `Vista previa de ${data.name}`)}
+            <div class="admin-image-field-actions">
+              <input id="admin-edit-image-file" type="file" accept="image/png, image/jpeg, image/webp, image/svg+xml" />
+              <input id="admin-edit-image-data" type="hidden" value="${escapeHtml(data.image || "")}" />
+              <button type="button" id="admin-clear-image">Quitar imagen personalizada</button>
+            </div>
+          </div>
+        </section>
         <label>
           Descripción principal
           <textarea id="admin-edit-description">${escapeHtml(data.description)}</textarea>
@@ -403,8 +485,11 @@ function renderServiceDetail(data) {
         ${renderAdminPanel(data)}
 
         <section class="detail-hero" aria-labelledby="detail-title">
-          <h1 id="detail-title">${data.name}</h1>
-          <p>${data.description}</p>
+          <div class="detail-hero-copy">
+            <h1 id="detail-title">${data.name}</h1>
+            <p>${data.description}</p>
+          </div>
+          ${getServiceImageMarkup(data, "detail-hero-image", `Imagen de ${data.name}`)}
         </section>
 
         ${renderAdminEditor(data)}
@@ -505,6 +590,7 @@ function renderServiceDetail(data) {
   `;
 
   wireDetailActions(data);
+  wireImageFallbacks(detailRoot);
   window.dispatchEvent(new CustomEvent("cercared:service-rendered", { detail: data }));
 }
 
@@ -520,6 +606,7 @@ function toSavedService(data) {
     entity: data.entity,
     category: data.category,
     description: data.shortDescription,
+    image: data.image || "",
     url: getShareUrl(data.id),
   };
 }
@@ -574,6 +661,10 @@ function wireDetailActions(data) {
   const adminForm = document.querySelector("#admin-service-form");
   const adminResetButton = document.querySelector("#admin-reset-draft");
   const validationList = document.querySelector("#admin-validation-list");
+  const imageInput = document.querySelector("#admin-edit-image-file");
+  const imageData = document.querySelector("#admin-edit-image-data");
+  const imagePreview = document.querySelector(".admin-service-image-preview");
+  const clearImageButton = document.querySelector("#admin-clear-image");
 
   function openAdminEditor() {
     if (!adminEditor) return;
@@ -658,6 +749,7 @@ function wireDetailActions(data) {
       channels: validateSectionField("#admin-edit-channels", "Canales de atención", errors),
       resources: validateResourceField("#admin-edit-resources", "Recursos útiles", errors),
       checklist: validateOptionalSectionField("#admin-edit-checklist", "Checklist", errors),
+      image: imageData?.value.trim() || "",
     };
 
     renderValidationErrors(errors);
@@ -686,6 +778,39 @@ function wireDetailActions(data) {
     showDetailToast("Formulario restablecido");
     renderServiceDetail(data);
     window.requestAnimationFrame(openAdminEditor);
+  });
+
+  imageInput?.addEventListener("change", async () => {
+    try {
+      const file = imageInput.files?.[0];
+      const image = await readImageFile(file);
+      if (imageData) imageData.value = image;
+      updateImagePreview(imagePreview, {
+        id: data.id,
+        name: document.querySelector("#admin-edit-name")?.value || data.name,
+        image,
+      });
+      showDetailToast(file ? "Imagen cargada" : "Imagen restablecida");
+    } catch (error) {
+      imageInput.value = "";
+      if (imageData) imageData.value = data.image || "";
+      updateImagePreview(imagePreview, {
+        id: data.id,
+        name: data.name,
+        image: data.image || "",
+      });
+      showDetailToast(error.message);
+    }
+  });
+
+  clearImageButton?.addEventListener("click", () => {
+    if (imageInput) imageInput.value = "";
+    if (imageData) imageData.value = "";
+    updateImagePreview(imagePreview, {
+      id: data.id,
+      name: document.querySelector("#admin-edit-name")?.value || data.name,
+    });
+    showDetailToast("Se quitó la imagen personalizada");
   });
 }
 

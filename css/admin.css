@@ -149,6 +149,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .admin-card h2 {
@@ -162,7 +163,6 @@
   display: grid;
   grid-template-columns: minmax(260px, 1fr) repeat(2, minmax(180px, 240px));
   gap: var(--space-3);
-  margin-top: var(--space-4);
 }
 
 .admin-toolbar label {
@@ -214,6 +214,11 @@
   color: var(--color-text);
   font-size: 15px;
   line-height: 22px;
+}
+
+.admin-table td span {
+  display: inline-block;
+  margin-top: 4px;
 }
 
 .admin-row-actions {
@@ -332,5 +337,10 @@
 
   .admin-stats {
     grid-template-columns: 1fr;
+  }
+
+  .admin-row-actions {
+    grid-template-columns: 1fr;
+    min-width: 180px;
   }
 }

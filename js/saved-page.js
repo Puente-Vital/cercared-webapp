@@ -3,6 +3,18 @@
   const empty = document.querySelector("#saved-empty");
   const count = document.querySelector("#saved-count");
   const { getSaved, setSaved } = window.CercaRedSaved;
+  const imageHelpers = window.CercaRedServiceImages || {};
+
+  function createImage(service) {
+    const img = document.createElement("img");
+    img.className = "service-card-image";
+    img.alt = service?.name ? `Imagen de ${service.name}` : "Imagen del servicio";
+    imageHelpers.attachFallback?.(
+      img,
+      imageHelpers.getServiceImageCandidates?.(service) || ["assets/images/cards/default.svg"],
+    );
+    return img;
+  }
 
   function createCard(service) {
     const article = document.createElement("article");
@@ -19,6 +31,7 @@
         <button class="details-button" type="button">Ver detalle</button>
         <button class="share-button remove-button" type="button">Quitar de guardados</button>
       </div>`;
+    article.prepend(createImage(service));
 
     article.querySelector(".details-button").addEventListener("click", () => {
       if (!service.id) return;
