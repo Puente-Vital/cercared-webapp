@@ -891,6 +891,77 @@ body {
 .cs-opt.is-active {
   background: var(--color-hover, #eaf4ff);
 }
+.user-activity-summary {
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+.summary-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.summary-card h3 {
+  font-size: 1.1rem;
+  color: #1e293b;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+}
+
+.summary-icon {
+  width: 24px;
+  height: 24px;
+  opacity: 0.7;
+}
+
+.summary-label {
+  display: block;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.summary-value {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.summary-link {
+  color: #2563eb;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-block;
+  margin-top: 0.2rem;
+}
+
+.summary-link:hover {
+  text-decoration: underline;
+}
 .service-card-image {
   width: 100%;
   height: 120px;

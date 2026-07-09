@@ -1,26 +1,19 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Encuentra servicios sociales y recursos institucionales en CercaRed."
-    />
-    <title>Catálogo de servicios | CercaRed</title>
+    <meta name="description" content="Bienvenido a CercaRed - Resumen de actividad y servicios recomendados." />
+    <title>Inicio | CercaRed</title>
     <link rel="icon" type="image/png" href="assets/images/logoencabezado.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="css/base.css" />
     <link rel="stylesheet" href="css/navbar.css" />
     <link rel="stylesheet" href="css/catalog.css" />
     <link rel="stylesheet" href="css/footer.css" />
     <link rel="stylesheet" href="css/saved.css" />
-    <link rel="stylesheet" href="css/share.css" />
     <script src="js/services.js" defer></script>
     <script type="module" src="js/catalog.js"></script>
   </head>
@@ -30,24 +23,12 @@
         <a class="brand" href="index.html" aria-label="CercaRed inicio">
           <img class="brand-logo" src="assets/images/logo.png" alt="CercaRed" />
         </a>
-
-        <button
-          class="nav-toggle"
-          type="button"
-          aria-label="Abrir menú"
-          aria-expanded="false"
-          aria-controls="nav-menu"
-        >
-          <img
-            class="nav-toggle-icon"
-            src="assets/icons/menu.svg"
-            alt=""
-            aria-hidden="true"
-          />
+        <button class="nav-toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="nav-menu">
+          <img class="nav-toggle-icon" src="assets/icons/menu.svg" alt="" aria-hidden="true" />
         </button>
-
         <div class="nav-menu" id="nav-menu">
-          <a class="is-active" href="index.html" aria-current="page">Catálogo</a>
+          <a class="is-active" href="index.html" aria-current="page">Inicio</a>
+          <a href="catalog.html">Catálogo</a>
           <a href="saved.html">Guardados</a>
           <!---Aqui va pa registrarse--->
           <a href="ayuda.html">Ayuda</a>
@@ -57,128 +38,59 @@
     </header>
 
     <main class="catalog-main">
-      <section class="catalog-heading" aria-labelledby="catalog-title">
-        <h1 id="catalog-title">Catálogo de servicios</h1>
-        <p>
-          Encuentra orientación y recursos institucionales diseñados para apoyarte.
-          Explora servicios por categoría o ubicación.
-        </p>
+      <section class="catalog-heading">
+        <h1>Bienvenido a CercaRed</h1>
+        <p>Tu portal de orientación y recursos institucionales adaptados a tus necesidades.</p>
       </section>
 
-      <section class="search-section" aria-label="Búsqueda de servicios">
-        <form class="search-form" id="service-search" role="search">
-          <div class="search-field">
-            <img src="assets/icons/search.svg" alt="" aria-hidden="true" />
-            <label class="visually-hidden" for="search-input">
-              Buscar servicios por palabra clave
-            </label>
-            <input
-              id="search-input"
-              name="query"
-              type="search"
-              placeholder="Buscar por salud, alimentos, vivienda, educación..."
-              autocomplete="off"
-            />
+      <!-- SECCIÓN: RESUMEN DE ACTIVIDAD -->
+      <section class="user-activity-summary" id="activity-summary">
+        <div class="summary-card">
+          <h3>Mi Actividad Reciente</h3>
+          <div class="summary-grid">
+            <div class="summary-item" id="summary-saved-box">
+              <img src="assets/icons/menu.svg" alt="" aria-hidden="true" class="summary-icon"/>
+              <div>
+                <span class="summary-label">Servicios guardados</span>
+                <p class="summary-value" id="saved-count-text">0 servicios</p>
+              </div>
+            </div>
+            <div class="summary-item" id="summary-last-visited-box">
+              <img src="assets/icons/search.svg" alt="" aria-hidden="true" class="summary-icon"/>
+              <div>
+                <span class="summary-label">Último visitado</span>
+                <p class="summary-value" id="last-visited-text">Ninguno recientemente</p>
+              </div>
+            </div>
+            <div class="summary-item" id="summary-suggestion-box">
+              <div>
+                <span class="summary-label">Sugerencia para continuar</span>
+                <a href="#" id="suggestion-link" class="summary-link">Explorar más servicios</a>
+              </div>
+            </div>
           </div>
-          <button class="search-button" type="submit">Buscar</button>
-        </form>
-
-        <div class="filters" aria-label="Filtros del catálogo">
-          <label>
-            <span class="visually-hidden">Filtrar por categoría</span>
-            <select id="category-filter">
-              <option value="">Categoría</option>
-              <option value="Adulto mayor">Adulto mayor</option>
-              <option value="Educación">Educación</option>
-              <option value="Salud">Salud</option>
-              <option value="Social">Social</option>
-              <option value="Vivienda">Vivienda</option>
-            </select>
-          </label>
-
-          <label>
-            <span class="visually-hidden">Filtrar por distrito</span>
-            <select id="district-filter">
-              <option value="">Distrito</option>
-              <option value="Nacional">Todos / Nacional</option>
-              <option value="Ancón">Ancón</option>
-              <option value="Ate">Ate</option>
-              <option value="Barranco">Barranco</option>
-              <option value="Breña">Breña</option>
-              <option value="Carabayllo">Carabayllo</option>
-              <option value="Chaclacayo">Chaclacayo</option>
-              <option value="Chorrillos">Chorrillos</option>
-              <option value="Cieneguilla">Cieneguilla</option>
-              <option value="Comas">Comas</option>
-              <option value="El Agustino">El Agustino</option>
-              <option value="Independencia">Independencia</option>
-              <option value="Jesús María">Jesús María</option>
-              <option value="La Molina">La Molina</option>
-              <option value="La Victoria">La Victoria</option>
-              <option value="Lima">Lima (Cercado)</option>
-              <option value="Lince">Lince</option>
-              <option value="Los Olivos">Los Olivos</option>
-              <option value="Lurigancho">Lurigancho (Chosica)</option>
-              <option value="Lurín">Lurín</option>
-              <option value="Magdalena del Mar">Magdalena del Mar</option>
-              <option value="Miraflores">Miraflores</option>
-              <option value="Pachacámac">Pachacámac</option>
-              <option value="Pucusana">Pucusana</option>
-              <option value="Pueblo Libre">Pueblo Libre</option>
-              <option value="Puente Piedra">Puente Piedra</option>
-              <option value="Punta Hermosa">Punta Hermosa</option>
-              <option value="Punta Negra">Punta Negra</option>
-              <option value="Rímac">Rímac</option>
-              <option value="San Bartolo">San Bartolo</option>
-              <option value="San Borja">San Borja</option>
-              <option value="San Isidro">San Isidro</option>
-              <option value="San Juan de Lurigancho">San Juan de Lurigancho</option>
-              <option value="San Juan de Miraflores">San Juan de Miraflores</option>
-              <option value="San Luis">San Luis</option>
-              <option value="San Martín de Porres">San Martín de Porres</option>
-              <option value="San Miguel">San Miguel</option>
-              <option value="Santa Anita">Santa Anita</option>
-              <option value="Santa María del Mar">Santa María del Mar</option>
-              <option value="Santa Rosa">Santa Rosa</option>
-              <option value="Santiago de Surco">Santiago de Surco</option>
-              <option value="Surquillo">Surquillo</option>
-              <option value="Villa El Salvador">Villa El Salvador</option>
-              <option value="Villa María del Triunfo">Villa María del Triunfo</option>
-            </select>
-          </label>
-
-          <label>
-            <span class="visually-hidden">Filtrar por modalidad</span>
-            <select id="modality-filter">
-              <option value="">Modalidad</option>
-              <option value="Presencial">Presencial</option>
-              <option value="Virtual">Virtual</option>
-              <option value="Mixta">Mixta</option>
-            </select>
-          </label>
-
-          <button class="clear-filters" id="clear-filters" type="button">
-            <img src="assets/icons/fillter_off.svg" alt="" aria-hidden="true" />
-            Limpiar filtros
-          </button>
         </div>
       </section>
 
-      <section class="results-section" aria-labelledby="results-title">
-        <h2 class="visually-hidden" id="results-title">Resultados de servicios</h2>
-        <p class="results-count" id="results-count" aria-live="polite"></p>
-        <div class="services-grid" id="services-grid"></div>
-
-        <div class="empty-state" id="empty-state" hidden>
-          <img src="assets/icons/search.svg" alt="" aria-hidden="true" />
-          <h2>No se encontraron servicios</h2>
-          <p>Prueba con otra palabra o revisa cómo la escribiste.</p>
-          <button id="empty-clear-search" type="button">Ver todos los servicios</button>
+      <!-- SECCIÓN: RECOMENDADOS Y POPULARES -->
+      <section class="services-suggestions-sections" aria-label="Sugerencias de servicios">
+        
+        <!-- CORREGIDO: Se añadió id="recommended-section" -->
+        <div class="suggestion-block" id="recommended-section">
+          <h2>Servicios Recomendados</h2>
+          <p class="suggestion-subtitle">Basado en tus preferencias y perfil.</p>
+          <div class="services-grid" id="recommended-services-grid">
+            <p class="placeholder-text">Cargando recommendations...</p>
+          </div>
         </div>
 
-        <nav class="pagination" id="pagination" aria-label="Paginación del catálogo">
-          <button class="is-current" type="button" aria-current="page">1</button>
-        </nav>
+        <div class="suggestion-block">
+          <h2>Servicios Populares</h2>
+          <p class="suggestion-subtitle">Los recursos más consultados por la comunidad.</p>
+          <div class="services-grid" id="popular-services-grid">
+            <p class="placeholder-text">Cargando servicios populares...</p>
+          </div>
+        </div>
       </section>
     </main>
 
@@ -187,7 +99,5 @@
     <script src="js/navbar.js"></script>
     <script src="js/footer.js"></script>
     <script src="js/saved.js"></script>
-    <script src="js/share.js"></script>
-    <script src="js/distrito-desplegable.js"></script>
   </body>
 </html>

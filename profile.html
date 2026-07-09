@@ -8,8 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  
-<link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/base.css" />
   <link rel="stylesheet" href="css/navbar.css" />
   <link rel="stylesheet" href="css/profile.css" />
   <link rel="stylesheet" href="css/catalog.css" />
@@ -27,8 +26,10 @@
         <img class="nav-toggle-icon" src="assets/icons/menu.svg" alt="" aria-hidden="true" />
       </button>
 
+      <!-- CORREGIDO: Añadido enlace a Inicio y estructurado correctamente -->
       <div class="nav-menu" id="nav-menu">
-        <a href="index.html">Catálogo</a>
+        <a href="index.html">Inicio</a>
+        <a href="catalog.html">Catálogo</a>
         <a href="saved.html">Guardados</a>
         <a href="ayuda.html">Ayuda</a>
         <a class="is-active" href="profile.html" aria-current="page">Mi perfil</a>
@@ -50,7 +51,7 @@
             <button class="btn-accent" id="btnLogout" type="button">Cerrar sesion</button>
           </div>
 
-        <form id="profileEditMode" class="hidden">
+          <form id="profileEditMode" class="hidden">
             <div class="avatar-edit-container">
               <div class="user-avatar" id="userAvatarEdit"></div>
               <label for="avatarUpload" class="avatar-upload-label">Cambiar foto</label>
@@ -80,13 +81,10 @@
       </aside>
 
       <section class="profile-content">
-        
-<div class="profile-card">
+        <div class="profile-card">
           <h2 class="card-title">Preferencias</h2>
           
           <form id="preferencesForm" class="settings-form">
-
-
             <div class="form-row">
               <div class="form-group">
                 <label for="district">Distrito de búsqueda por defecto</label>
@@ -193,15 +191,15 @@
             <button type="submit" class="btn-accent btn-submit full-width">Actualizar contraseña</button>
           </form>
         </div>
-
       </section>
     </div>
   </main>
 
-<main-footer></main-footer>
+  <main-footer></main-footer>
 
   <script type="module" src="js/navbar.js"></script>
   <script src="js/footer.js"></script>
   <script src="js/distrito-desplegable.js"></script>
   <script type="module" src="js/profile.js"></script>
+</body>
 </html>

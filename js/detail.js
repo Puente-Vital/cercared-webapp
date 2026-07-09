@@ -1,7 +1,6 @@
 import { doc, increment, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { db, loadServices, setServiceActive, updateService } from "./service-store.js";
 
-// CONFIGURACIÓN DINÁMICA DE PARÁMETROS URL
 const detailRoot = document.querySelector("#service-detail");
 const params = new URLSearchParams(window.location.search);
 const serviceId = params.get("id") || "pension-65";
@@ -176,9 +175,6 @@ async function toggleServiceStatus(serviceData) {
   renderServiceDetail(rawService);
 }
 
-// ==========================================================================
-// FUNCIONES DE RENDERIZADO DEL COMPONENTE DETALLE
-// ==========================================================================
 function renderCards(items) {
   return items
     .map(
@@ -387,6 +383,13 @@ function renderNotFound() {
 function renderServiceDetail(data) {
   document.title = `${data.name} | CercaRed`;
   window.CercaRedCurrentService = data;
+
+  const currentService = {
+    id: data.id,
+    name: data.name,
+    category: data.category
+  };
+  localStorage.setItem('cercared_last_visited', JSON.stringify(currentService));
 
   detailRoot.innerHTML = `
     <div class="detail-layout">
@@ -930,9 +933,6 @@ function downloadSummaryPDF(data) {
   showDetailToast("Resumen descargado");
 }
 
-// ==========================================================================
-// FASE B: ANALYTICS - FUNCIÓN DE CONTROL DE CLICS (SILENCIOSA)
-// ==========================================================================
 async function trackServiceVisit(serviceData) {
   if (!serviceData || !serviceData.id) return;
   try {
@@ -949,16 +949,13 @@ async function trackServiceVisit(serviceData) {
   }
 }
 
-// ==========================================================================
-// FLUJO DE INICIALIZACIÓN DE LA PÁGINA
-// ==========================================================================
 async function initDetail() {
   const services = await loadServices();
   rawService = services.find((item) => item.id === serviceId);
 
   if (rawService && (isAdminUser() || !isServiceInactive(rawService))) {
     renderServiceDetail(rawService);
-    trackServiceVisit(rawService); // <-- DISPARADOR AUTOMÁTICO SILENCIOSO DE MÉTRICAS
+    trackServiceVisit(rawService);
   } else {
     renderNotFound();
   }
