@@ -3,7 +3,7 @@
   --color-primary-hover: #163b6a;
   --color-accent: #f97316;
   --color-accent-hover: #ea580c;
-  --color-on-accent: #111827;
+  --color-on-accent: #ffffff;
   --color-background: #f8fafc;
   --color-surface: #ffffff;
   --color-soft: #eaf4ff;
@@ -46,6 +46,22 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+body.view-mode-simple {
+  font-size: 1.25rem !important; 
+}
+
+body.view-mode-simple h1, 
+body.view-mode-simple h2, 
+body.view-mode-simple h3 {
+  letter-spacing: 0px !important;
+}
+
+body.view-mode-simple .service-card h3 {
+  font-size: 1.6rem !important; 
+}
+
+
 
 a {
   color: inherit;

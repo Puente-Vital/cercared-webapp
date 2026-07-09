@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Detalle del servicio social seleccionado en CercaRed."
+      content="Panel administrativo de CercaRed para revisar métricas y gestionar servicios."
     />
-    <title>Detalle del servicio | CercaRed</title>
+    <title>Panel admin | CercaRed</title>
     <link rel="icon" type="image/png" href="assets/images/logoencabezado.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,16 +17,10 @@
     />
     <link rel="stylesheet" href="css/base.css" />
     <link rel="stylesheet" href="css/navbar.css" />
-    <link rel="stylesheet" href="css/detail.css" />
+    <link rel="stylesheet" href="css/admin.css" />
     <link rel="stylesheet" href="css/footer.css" />
-    <link rel="stylesheet" href="css/saved.css" />
-    <link rel="stylesheet" href="css/share.css" />
-    <link rel="stylesheet" href="css/simple-mode.css" />
     <script src="js/services.js" defer></script>
-    <script src="js/service-images.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script type="module" src="js/detail.js"></script>
-
+    <script type="module" src="js/admin.js"></script>
   </head>
   <body>
     <header class="site-header">
@@ -52,24 +46,23 @@
 
         <div class="nav-menu" id="nav-menu">
           <a href="index.html">Inicio</a>
-          <a class="is-active" href="catalog.html" aria-current="page">Catálogo</a>
+          <a href="catalog.html">Catálogo</a>
           <a href="saved.html">Guardados</a>
           <a href="ayuda.html">Ayuda</a>
           <a href="auth.html">Acceso</a>
         </div>
-
-        <button class="simple-mode-button" type="button">Modo simple</button>
       </nav>
     </header>
 
-    <main class="detail-main" id="service-detail"></main>
+    <main class="admin-main" id="admin-root">
+      <section class="admin-state" aria-live="polite">
+        <p>Validando permisos de administrador...</p>
+      </section>
+    </main>
 
     <main-footer></main-footer>
 
     <script src="js/navbar.js"></script>
     <script src="js/footer.js"></script>
-    <script src="js/saved.js"></script>
-    <script src="js/share.js"></script>
-    <script src="js/simple-mode.js"></script>
   </body>
 </html>

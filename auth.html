@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CercaRed | Autenticación</title>
+  <link rel="icon" type="image/png" href="assets/images/logoencabezado.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -25,8 +26,10 @@
       </button>
 
       <div class="nav-menu" id="nav-menu">
-        <a href="index.html">Catálogo</a>
+        <a href="index.html">Inicio</a>
+        <a href="catalog.html">Catálogo</a>
         <a href="saved.html">Guardados</a>
+        <a href="ayuda.html">Ayuda</a>
         <a href="auth.html" class="is-active" aria-current="page">Acceso</a>
       </div>
     </nav>
@@ -144,7 +147,7 @@
               <div class="input-group">
                 <label for="registerPassword">Contraseña</label>
                 <div class="password-container">
-                  <input type="password" id="registerPassword" placeholder="Crea una contraseña segura" aria-describedby="registerPasswordError" />
+                  <input type="password" id="registerPassword" placeholder="Crea una contraseña" aria-describedby="registerPasswordError" />
                   <img src="assets/images/eyesnot.png" class="toggle-password" data-target="registerPassword" alt="Mostrar/Ocultar" />
                 </div>
                 <span class="error-message" id="registerPasswordError" aria-live="polite"></span>

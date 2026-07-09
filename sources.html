@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fuentes Oficiales - CercaRed</title>
+  <link rel="icon" type="image/png" href="assets/images/logoencabezado.png" />
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/legal.css">
+  <style>
+
+    .source-btn-link {
+      display: inline-block;
+      margin-top: var(--space-3);
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--color-primary) !important;
+      text-decoration: none;
+      transition: opacity 0.2s ease;
+    }
+    .source-btn-link:hover {
+      opacity: 0.8;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body class="legal-page">
+
+  
+  <header class="legal-header">
+    <div class="legal-brand">
+      <img src="assets/images/LogoPrivSourTerms.png" alt="CercaRed" class="legal-logo" style="height: 20px; width: auto; object-fit: contain;">
+    </div>
+    
+    <nav class="legal-nav-links">
+      <a href="sources.html" class="legal-nav-item active">Fuentes</a>
+      <a href="terms.html" class="legal-nav-item">Condiciones</a>
+      <a href="privacy.html" class="legal-nav-item">Privacidad</a>
+    </nav>
+    
+    <div style="width: 32px;"></div>
+  </header>
+    
+    <div style="width: 32px;"></div>
+  </header>
+
+  <main class="legal-main">
+    <!-- El mega título imponente del sistema -->
+    <h1 class="legal-hero-title">Fuentes oficiales</h1>
+    
+    <div class="legal-layout-grid">
+      <!-- Columna de lectura izquierda -->
+      <div class="legal-body-text">
+        <div class="legal-notice-box">
+          Garantizamos la veracidad y transparencia de cada uno de los servicios mapeados en nuestra plataforma.
+        </div>
+        
+        <h3>Comprometidos con la información real</h3>
+        <p>En CercaRed nos tomamos en serio el soporte ciudadano. Todo el contenido, programas asistenciales, líneas de ayuda y herramientas de soporte que indexamos en nuestro catálogo provienen en su totalidad de portales del gobierno central, ministerios u organizaciones civiles formales del Perú.</p>
+        
+        <!-- Reutilizamos las cajas de resumen visual como contenedores de tus fuentes oficiales -->
+        <h2 id="gobpe">1. Estado Peruano (Gob.pe)</h2>
+        <p>Es la plataforma digital única del Estado Peruano para orientación al ciudadano. Desde aquí recopilamos los accesos a bonos vigentes, convocatorias, trámites generales y programas de soporte social gubernamentales.</p>
+        <div class="summary-box">
+          <strong>Portal Oficial Indexado</strong>
+          <p>Toda la información del marco normativo estatal se centraliza a través de este canal.</p>
+          <a href="https://www.gob.pe" target="_blank" rel="noopener" class="source-btn-link">Visitar gob.pe →</a>
+        </div>
+
+        <h2 id="mimp">2. Ministerio de la Mujer (MIMP)</h2>
+        <p>El Ministerio de la Mujer y Poblaciones Vulnerables rige las políticas de protección familiar. De esta fuente extraemos la ubicación de los Centros Emergencia Mujer (CEM), accesos a la Línea 100 y programas de amparo social en Lima Metropolitana.</p>
+        <div class="summary-box">
+          <strong>Portal Oficial Indexado</strong>
+          <p>Validación directa de canales de asistencia de emergencia para grupos vulnerables de la capital.</p>
+          <a href="https://www.gob.pe/mimp" target="_blank" rel="noopener" class="source-btn-link">Ver sitio oficial →</a>
+        </div>
+
+        <h2 id="munlima">3. Municipalidad de Lima</h2>
+        <p>La Municipalidad Metropolitana de Lima gestiona los servicios locales de la ciudad. Usamos su base de datos oficial para enlazar iniciativas comunales, comedores populares vigentes y la red de salud asistencial preventiva (Sisol Salúd).</p>
+        <div class="summary-box">
+          <strong>Portal Oficial Indexado</strong>
+          <p>Programas de apoyo social y soporte alimentario distribuidos en los distritos de Lima Metropolitana.</p>
+          <a href="https://www.munlima.gob.pe" target="_blank" rel="noopener" class="source-btn-link">Ver sitio oficial →</a>
+        </div>
+      </div>
+
+      <!-- Columna Derecha Fija (Tabla de contenidos dinámica) -->
+      <aside class="legal-sidebar">
+        <div class="sidebar-title">Organismos indexados</div>
+        <ul class="sidebar-list">
+          <li><a href="#" class="sidebar-link">Compromiso real</a></li>
+          <li><a href="#gobpe" class="sidebar-link">1. Plataforma Gob.pe</a></li>
+          <li><a href="#mimp" class="sidebar-link">2. Ministerio de la Mujer</a></li>
+          <li><a href="#munlima" class="sidebar-link">3. Municipalidad de Lima</a></li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <script type="module" src="js/navbar.js"></script>
+</body>
+</html>

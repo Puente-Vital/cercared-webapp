@@ -1,8 +1,5 @@
-// ==========================================================================
-// IMPORTACIONES E INICIALIZACIÓN DE FIREBASE (AL INICIO ABSOLUTO)
-// ==========================================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -19,10 +16,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Variable global interna para el manejo de los datos del usuario activo
   let currentUser = {};
 
-  // ELEMENTOS DEL DOM ORIGINALES
   const profileViewMode = document.getElementById('profileViewMode');
   const profileEditMode = document.getElementById('profileEditMode');
   const btnEditProfile = document.getElementById('btnEditProfile');
@@ -32,22 +27,64 @@ document.addEventListener('DOMContentLoaded', () => {
   const districtInput = document.getElementById('district');
   const categoryInput = document.getElementById('category');
   const preferencesForm = document.getElementById('preferencesForm');
-  const passwordForm = document.getElementById('passwordForm');
-  const currentInput = document.getElementById('currentPassword');
-  const newInput = document.getElementById('newPassword');
-  const confirmInput = document.getElementById('confirmPassword');
-  const currentError = document.getElementById('currentPasswordError');
-  const newError = document.getElementById('newPasswordError');
-  const confirmError = document.getElementById('confirmPasswordError');
 
   let tempAvatarBase64 = null;
+  const cachedUser = JSON.parse(localStorage.getItem('cercared_currentUser'));
+  
+  if (cachedUser) {
+    currentUser = {
+      name: cachedUser.name || "Usuario de CercaRed",
+      email: cachedUser.email || "",
+      avatar: cachedUser.avatar || null,
+      role: cachedUser.role || "user",
+      preferences: cachedUser.preferences || { district: "", category: "", viewMode: "normal" }
+    };
+    document.getElementById('userName').textContent = currentUser.name;
+    document.getElementById('userEmail').textContent = currentUser.email;
+    
+    const userAvatarEl = document.getElementById('userAvatar');
+    if (userAvatarEl) {
+      if (currentUser.avatar) {
+        userAvatarEl.innerHTML = `<img src="${currentUser.avatar}" alt="Avatar">`;
+      } else {
+        const nameParts = currentUser.name.trim().split(' ');
+        let initials = nameParts.length >= 2 ? nameParts[0].charAt(0) + nameParts[1].charAt(0) : nameParts[0].substring(0, 2);
+        userAvatarEl.innerHTML = initials.toUpperCase();
+      }
+    }
+    
+    if (districtInput) districtInput.value = currentUser.preferences.district || "";
+    if (categoryInput) categoryInput.value = currentUser.preferences.category || "";
+  }
 
-  // ==========================================
-  // FLUJO EN TIEMPO REAL: FIRESTORE + AUTH
-  // ==========================================
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
+      localStorage.removeItem('cercared_has_session');
+      localStorage.removeItem('cercared_currentUser');
+      if (window.CercaRedNavbar) window.CercaRedNavbar.updateAuthLink();
       window.location.href = 'auth.html';
+      return;
+    }
+
+    const isManualUser = user.providerData.some(p => p.providerId === 'password');
+    if (isManualUser && !user.emailVerified) {
+      const profileContent = document.querySelector('.profile-content');
+      if (profileContent) {
+        profileContent.innerHTML = `
+          <div class="profile-card" style="text-align: center; padding: var(--space-4);">
+            <h2 style="color: var(--color-error, #d32f2f); margin-bottom: var(--space-2);">Verificación requerida</h2>
+            <p style="color: var(--color-text); margin-bottom: var(--space-3);">
+              Hemos enviado un enlace de confirmación a tu correo <strong>${user.email}</strong>. 
+              Por favor, revisa tu bandeja de entrada o la carpeta de spam y haz clic en el enlace para activar tu cuenta.
+            </p>
+            <button type="button" class="btn-primary" onclick="window.location.reload();" style="width: auto; padding: 10px 24px;">
+              Ya verifiqué mi correo (Recargar página)
+            </button>
+          </div>
+        `;
+      }
+      localStorage.setItem('cercared_has_session', 'true');
+      if (window.CercaRedNavbar) window.CercaRedNavbar.updateAuthLink(true);
       return;
     }
 
@@ -61,30 +98,35 @@ document.addEventListener('DOMContentLoaded', () => {
           uid: user.uid,
           name: firestoreData.name || user.displayName || "Usuario de CercaRed",
           email: user.email,
+          role: firestoreData.role || "user",
           avatar: firestoreData.avatar || null,
-          preferences: firestoreData.preferences || { district: "", category: "", fontSize: "normal", viewMode: "normal" }
+          preferences: firestoreData.preferences || { district: "", category: "", viewMode: "normal" }
         };
       } else {
         currentUser = {
           uid: user.uid,
           name: user.displayName || "Usuario de CercaRed",
           email: user.email,
+          role: "user",
           avatar: null,
-          preferences: { district: "", category: "", fontSize: "normal", viewMode: "normal" }
+          preferences: { district: "", category: "", viewMode: "normal" }
         };
       }
 
-      // Inicializar y renderizar las vistas con los datos de Firebase cargados
       renderProfileView();
+      localStorage.setItem('cercared_currentUser', JSON.stringify(currentUser));
       renderSavedStats();
       sincronizarPreferenciasEnPantalla();
-
+      aplicarModoVistaGlobal(currentUser.preferences.viewMode);
+      configurarSeccionContrasena(user);
     } catch (error) {
-      console.error("Error al obtener el perfil de Firebase:", error);
+      console.error(error);
     }
+
+    localStorage.setItem('cercared_has_session', 'true');
+    if (window.CercaRedNavbar) window.CercaRedNavbar.updateAuthLink(true);
   });
 
-  // LOGICA DINÁMICA DE AVATARES E INICIALES
   const updateAvatarDisplay = (elementId, userObj) => {
     const el = document.getElementById(elementId);
     if (!el) return;
@@ -103,50 +145,63 @@ document.addEventListener('DOMContentLoaded', () => {
     updateAvatarDisplay('userAvatar', currentUser);
   };
 
-  // ESTADÍSTICAS MOCK GUARDADAS EN LOCALSTORAGE (MANTENIDO)
   const getSavedServices = () => JSON.parse(localStorage.getItem('cercared_saved') || '[]');
   const renderSavedStats = () => {
     const statsNum = document.querySelector('.stats-number');
     if (statsNum) statsNum.textContent = String(getSavedServices().length);
   };
 
-  const sincronizarPreferenciasEnPantalla = () => {
+const sincronizarPreferenciasEnPantalla = () => {
     const userPrefs = currentUser.preferences;
-    districtInput.value = userPrefs.district || "";
-    categoryInput.value = userPrefs.category || "";
+    
+    if (districtInput) {
+      districtInput.value = userPrefs.district || "";
+      districtInput.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    
+    if (categoryInput) {
+      categoryInput.value = userPrefs.category || "";
+      categoryInput.dispatchEvent(new Event("change", { bubbles: true }));
+    }
 
-    setToggleActive('fontSizeToggle', userPrefs.fontSize);
-    setToggleActive('viewModeToggle', userPrefs.viewMode);
+    setToggleActive('viewModeToggle', userPrefs.viewMode || "normal");
   };
 
-  // INTERACTIVIDAD DE LOS BOTONES DE PREFERENCIAS (TOGGLES)
-  const toggleGroups = document.querySelectorAll('.toggle-group');
-  const setButtonPressed = (buttons, activeButton) => {
-    buttons.forEach(button => {
-      const isActive = button === activeButton;
-      button.classList.toggle('active', isActive);
-      button.setAttribute('aria-pressed', String(isActive));
-    });
-  };
-
-  toggleGroups.forEach(group => {
-    const buttons = group.querySelectorAll('.btn-toggle');
+  const viewModeToggle = document.getElementById('viewModeToggle');
+  if (viewModeToggle) {
+    const buttons = viewModeToggle.querySelectorAll('.btn-toggle');
     buttons.forEach(btn => {
       btn.addEventListener('click', () => {
-        setButtonPressed(buttons, btn);
+        buttons.forEach(b => {
+          const isActive = b === btn;
+          b.classList.toggle('active', isActive);
+          b.setAttribute('aria-pressed', String(isActive));
+        });
       });
     });
-  });
+  }
 
   const setToggleActive = (groupId, savedValue) => {
     const group = document.getElementById(groupId);
     if (!group) return;
     const buttons = group.querySelectorAll('.btn-toggle');
     const activeButton = Array.from(buttons).find(btn => btn.dataset.value === savedValue) || buttons[0];
-    setButtonPressed(buttons, activeButton);
+    buttons.forEach(b => {
+      const isActive = b === activeButton;
+      b.classList.toggle('active', isActive);
+      b.setAttribute('aria-pressed', String(isActive));
+    });
   };
 
-  // BOTÓN IR A GUARDADOS Y LOGOUT NATIVO
+  // Función para inyectar la clase de accesibilidad al body en tiempo real
+  const aplicarModoVistaGlobal = (mode) => {
+    if (mode === 'simple') {
+      document.body.classList.add('view-mode-simple');
+    } else {
+      document.body.classList.remove('view-mode-simple');
+    }
+  };
+
   const btnViewSaved = document.getElementById('btnViewSaved');
   if (btnViewSaved) {
     btnViewSaved.addEventListener('click', () => {
@@ -157,11 +212,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnLogout').addEventListener('click', () => {
     signOut(auth).then(() => {
       localStorage.removeItem('cercared_currentUser');
+      if (window.CercaRedNavbar) window.CercaRedNavbar.updateAuthLink();
       window.location.href = 'index.html';
     });
   });
 
-  // FLUJO DE INTERFAZ: INICIAR EDICIÓN DE PERFIL
   btnEditProfile.addEventListener('click', () => {
     profileViewMode.classList.add('hidden');
     profileEditMode.classList.remove('hidden');
@@ -176,18 +231,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('avatarErrorContainer').classList.add('hidden');
   });
 
-  // PROCESAR CARGA DE IMAGEN (MÁXIMO 1MB)
   avatarUpload.addEventListener('change', (e) => {
     const file = e.target.files[0];
     const errorContainer = document.getElementById('avatarErrorContainer');
-
     if (file) {
       if (file.size > 1048576) {
         errorContainer.classList.remove('hidden');
         e.target.value = "";
         return;
       }
-
       errorContainer.classList.add('hidden');
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -198,81 +250,63 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ENVIAR ACTUALIZACIÓN DE NOMBRE Y FOTO A CLOUD FIRESTORE
   document.getElementById('profileEditMode').addEventListener('submit', async (e) => {
     e.preventDefault();
     const newName = editNameInput.value.trim();
-    
     if (newName) {
       try {
         currentUser.name = newName;
         currentUser.avatar = tempAvatarBase64;
-        
         await setDoc(doc(db, "users", currentUser.uid), {
           name: currentUser.name,
           avatar: currentUser.avatar
         }, { merge: true });
-        
         document.getElementById('userName').textContent = currentUser.name;
         updateAvatarDisplay('userAvatar', currentUser);
-        
         document.getElementById('profileEditMode').classList.add('hidden');
         document.getElementById('profileViewMode').classList.remove('hidden');
-        
       } catch (error) {
-        console.error("Error al guardar cambios de perfil:", error);
+        console.error(error);
         document.getElementById('avatarErrorContainer').classList.remove('hidden');
       }
     }
   });
 
-  // ENVIAR CONFIGURACIÓN DE TAMAÑO Y MODOS A PREFERENCIAS FIRESTORE
-  // ==========================================================================
-  // ENVIAR CONFIGURACIÓN DE TAMAÑO Y MODOS A PREFERENCIAS FIRESTORE
-  // ==========================================================================
+  // 🚀 Lógica de Envío Completa del Formulario de Preferencias
   preferencesForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const newDistrict = districtInput.value.trim();
-    const newCategory = categoryInput.value.trim();
-    const activeFontSize = document.querySelector('#fontSizeToggle .btn-toggle.active').dataset.value;
-    const activeViewMode = document.querySelector('#viewModeToggle .btn-toggle.active').dataset.value;
+    const newDistrict = districtInput.value;
+    const newCategory = categoryInput.value;
+    
+    // Obtenemos cuál botón del Modo de Vista está activo
+    const activeButton = document.querySelector('#viewModeToggle .btn-toggle.active');
+    const activeViewMode = activeButton ? activeButton.dataset.value : "normal";
 
     currentUser.preferences = {
       district: newDistrict,
       category: newCategory,
-      fontSize: activeFontSize,
       viewMode: activeViewMode
     };
 
     const successMsg = document.getElementById('preferencesSuccessMessage');
 
     try {
+      // Guardamos directamente en la nube
       await setDoc(doc(db, "users", currentUser.uid), {
         preferences: currentUser.preferences
       }, { merge: true });
 
-      // Animación suave de aparición sin mover ni estirar el fondo
-      // Tu JS se queda igual de elegante:
-        if (successMsg) {
-          successMsg.textContent = "¡Preferencias guardadas exitosamente!";
-          successMsg.style.color = "var(--color-success, #2e7d32)";
-          successMsg.style.visibility = "visible";
-          successMsg.style.opacity = "1";
+      // Actualizamos localStorage instantáneamente
+      localStorage.setItem('cercared_currentUser', JSON.stringify(currentUser));
+      
+      // Aplicamos el cambio de modo de vista de inmediato en la pantalla actual
+      aplicarModoVistaGlobal(activeViewMode);
 
-          setTimeout(() => {
-            successMsg.style.opacity = "0";
-            setTimeout(() => {
-              successMsg.style.visibility = "hidden";
-            }, 300);
-          }, 1250);
-        }
-
-} catch (error) {
-      console.error("Error al guardar preferencias:", error);
+      // ✨ Animamos el cartel de validación en verde para que el usuario sepa que funcionó
       if (successMsg) {
-        successMsg.textContent = "Hubo un error al guardar en la nube.";
-        successMsg.style.color = "#d32f2f"; 
+        successMsg.textContent = "¡Preferencias guardadas exitosamente!";
+        successMsg.style.color = "var(--color-success, #2e7d32)";
         successMsg.style.visibility = "visible";
         successMsg.style.opacity = "1";
 
@@ -281,30 +315,70 @@ document.addEventListener('DOMContentLoaded', () => {
           setTimeout(() => {
             successMsg.style.visibility = "hidden";
           }, 300);
-        }, 1250);
+        }, 3000); // Se muestra por 3 segundos completos
+      }
+
+    } catch (error) {
+      console.error(error);
+      if (successMsg) {
+        successMsg.textContent = "Hubo un error al guardar en la nube.";
+        successMsg.style.color = "#d32f2f"; 
+        successMsg.style.visibility = "visible";
+        successMsg.style.opacity = "1";
+        setTimeout(() => {
+          successMsg.style.opacity = "0";
+          setTimeout(() => {
+            successMsg.style.visibility = "hidden";
+          }, 300);
+        }, 3000);
       }
     }
   });
 
-  // ==========================================================================
-  // FORMULARIO TRADICIONAL DE CONTRASEÑA (REINICIAR ESTADOS)
-  // ==========================================================================
-  [currentInput, newInput, confirmInput].forEach(input => {
-    if (input) {
-      input.addEventListener('input', () => {
-        input.classList.remove('input-error');
-        if (input.nextElementSibling) input.nextElementSibling.textContent = "";
+  function configurarSeccionContrasena(user) {
+    const passwordCard = document.getElementById('passwordCard');
+    const passwordForm = document.getElementById('passwordForm');
+    if (!passwordCard || !passwordForm) return;
+
+    const isGoogle = user.providerData.some(provider => provider.providerId === 'google.com');
+    if (isGoogle) {
+      passwordCard.remove();
+    } else {
+      passwordCard.style.display = 'block';
+      passwordForm.style.display = 'block';
+      
+      passwordForm.innerHTML = `
+        <p style="margin-bottom: var(--space-3); color: var(--color-text);">
+          Te enviaremos un correo electrónico seguro con un enlace para restablecer tu contraseña.
+        </p>
+        <button type="button" id="btn-send-reset" class="btn-primary" style="width: auto; padding: 10px 24px; margin: 0;">
+          Enviar enlace de restablecimiento
+        </button>
+        <div id="password-status-msg" style="margin-top: var(--space-2); font-size: 14px; font-weight: 500; visibility: hidden; opacity: 0; transition: all 0.3s ease;"></div>
+      `;
+      const btnSendReset = document.getElementById('btn-send-reset');
+      const statusMsg = document.getElementById('password-status-msg');
+
+      btnSendReset.addEventListener('click', async () => {
+        try {
+          btnSendReset.disabled = true;
+          await sendPasswordResetEmail(auth, user.email);
+          statusMsg.textContent = "¡Correo enviado! Revisa tu bandeja de entrada o spam.";
+          statusMsg.style.color = "var(--color-success, #2e7d32)";
+          statusMsg.style.visibility = "visible";
+          statusMsg.style.opacity = "1";
+        } catch (error) {
+          console.error(error);
+          statusMsg.textContent = "Error al enviar el correo. Inténtalo más tarde.";
+          statusMsg.style.color = "var(--color-error, #d32f2f)";
+          statusMsg.style.visibility = "visible";
+          statusMsg.style.opacity = "1";
+          btnSendReset.disabled = false;
+        }
       });
     }
-  });
+  }
 
-  passwordForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    alert("Para actualizar tu clave de forma segura, utiliza el enlace de recuperación en el inicio de sesión.");
-    passwordForm.reset();
-  });
-
-  // TRANSICIÓN DE CARGA ESTABLECIDA
   const profileMain = document.querySelector('.profile-main');
   if (profileMain) profileMain.classList.add('is-loaded');
 });

@@ -1,30 +1,263 @@
-// ==========================================================================
-// IMPORTACIONES E INICIALIZACIÓN DE FIREBASE CORE
-// ==========================================================================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, setDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { doc, increment, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { db, loadServices, setServiceActive, updateService } from "./service-store.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCKV8X6ZDw12oFHyKYSNsnX_HiGRWlbaAQ",
-  authDomain: "cercared-auth.firebaseapp.com",
-  projectId: "cercared-auth",
-  storageBucket: "cercared-auth.firebasestorage.app",
-  messagingSenderId: "303320791334",
-  appId: "1:303320791334:web:4b32a407f6cb0748ae69e7"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-// CONFIGURACIÓN DINÁMICA DE PARÁMETROS URL
 const detailRoot = document.querySelector("#service-detail");
 const params = new URLSearchParams(window.location.search);
 const serviceId = params.get("id") || "pension-65";
-const service = (window.CercaRedServices || []).find((item) => item.id === serviceId);
+let rawService = null;
+const MAX_IMAGE_SIZE_BYTES = 350_000;
 
-// ==========================================================================
-// FUNCIONES DE RENDERIZADO DEL COMPONENTE DETALLE
-// ==========================================================================
+function getCurrentUser() {
+  try {
+    return JSON.parse(localStorage.getItem("cercared_currentUser") || "null");
+  } catch {
+    return null;
+  }
+}
+
+function isAdminUser() {
+  return getCurrentUser()?.role === "admin";
+}
+
+function getImageHelpers() {
+  return window.CercaRedServiceImages || {};
+}
+
+function readImageFile(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve("");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("Adjunta una imagen en formato JPG, PNG, WebP o SVG."));
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      reject(new Error("La imagen supera 350 KB. Usa un archivo más liviano."));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(new Error("No se pudo leer la imagen seleccionada."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function getServiceImageMarkup(service, className, alt) {
+  const candidates = getImageHelpers().getServiceImageCandidates?.(service) || ["assets/images/cards/default.svg"];
+  const escapedSources = escapeHtml(JSON.stringify(candidates));
+
+  return `
+    <img
+      class="${className}"
+      src="${escapeHtml(candidates[0])}"
+      alt="${escapeHtml(alt)}"
+      data-image-candidates="${escapedSources}"
+    />
+  `;
+}
+
+function wireImageFallbacks(root = document) {
+  const helpers = getImageHelpers();
+  root.querySelectorAll("[data-image-candidates]").forEach((img) => {
+    try {
+      const candidates = JSON.parse(img.dataset.imageCandidates || "[]");
+      helpers.attachFallback?.(img, candidates);
+    } catch {
+      // Keep the original src if dataset parsing fails.
+    }
+  });
+}
+
+function updateImagePreview(preview, serviceLike) {
+  if (!preview) return;
+
+  const candidates = getImageHelpers().getServiceImageCandidates?.(serviceLike) || ["assets/images/cards/default.svg"];
+  preview.alt = serviceLike?.name
+    ? `Vista previa de ${serviceLike.name}`
+    : "Vista previa de la imagen del servicio";
+  getImageHelpers().attachFallback?.(preview, candidates);
+  if (!preview.src) {
+    preview.src = candidates[0];
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function formatSectionItems(items) {
+  return (items || [])
+    .map((item) => `${item.title || ""} | ${item.description || ""}`)
+    .join("\n");
+}
+
+function formatResourceItems(items) {
+  return (items || [])
+    .map((item) =>
+      `${item.title || ""} | ${item.description || ""} | ${item.url || ""} | ${item.type || "otro"}`,
+    )
+    .join("\n");
+}
+
+function parseSectionItems(value) {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [title, ...descriptionParts] = line.split("|");
+      return {
+        title: title.trim(),
+        description: descriptionParts.join("|").trim() || "Por verificar",
+      };
+    });
+}
+
+function parseResourceItems(value) {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [title, description = "", url = "", type = "otro"] = line
+        .split("|")
+        .map((part) => part.trim());
+      return {
+        title,
+        description: description || "Recurso oficial relacionado al servicio.",
+        url,
+        type: type || "otro",
+      };
+    });
+}
+
+function isValidHttpUrl(value) {
+  try {
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol);
+  } catch {
+    return false;
+  }
+}
+
+function validateTextField(selector, label, errors) {
+  const field = document.querySelector(selector);
+  const value = field?.value.trim() || "";
+
+  field?.classList.remove("input-error");
+  if (!value) {
+    errors.push(`${label} es obligatorio.`);
+    field?.classList.add("input-error");
+  }
+
+  return value;
+}
+
+function validateSectionField(selector, label, errors) {
+  const field = document.querySelector(selector);
+  const value = field?.value.trim() || "";
+  const lines = value.split("\n").map((line) => line.trim()).filter(Boolean);
+
+  field?.classList.remove("input-error");
+
+  if (lines.length === 0) {
+    errors.push(`${label} debe tener al menos un elemento.`);
+    field?.classList.add("input-error");
+    return [];
+  }
+
+  const hasInvalidLine = lines.some((line) => {
+    const [title, ...descriptionParts] = line.split("|");
+    return !title?.trim() || !descriptionParts.join("|").trim();
+  });
+
+  if (hasInvalidLine) {
+    errors.push(`${label} debe usar el formato: Título | Descripción.`);
+    field?.classList.add("input-error");
+  }
+
+  return parseSectionItems(value);
+}
+
+function validateOptionalSectionField(selector, label, errors) {
+  const field = document.querySelector(selector);
+  const value = field?.value.trim() || "";
+  const lines = value.split("\n").map((line) => line.trim()).filter(Boolean);
+
+  field?.classList.remove("input-error");
+  if (lines.length === 0) return [];
+
+  const hasInvalidLine = lines.some((line) => {
+    const [title, ...descriptionParts] = line.split("|");
+    return !title?.trim() || !descriptionParts.join("|").trim();
+  });
+
+  if (hasInvalidLine) {
+    errors.push(`${label} debe usar el formato: Título | Descripción.`);
+    field?.classList.add("input-error");
+  }
+
+  return parseSectionItems(value);
+}
+
+function validateResourceField(selector, label, errors) {
+  const field = document.querySelector(selector);
+  const value = field?.value.trim() || "";
+  const lines = value.split("\n").map((line) => line.trim()).filter(Boolean);
+
+  field?.classList.remove("input-error");
+  if (lines.length === 0) return [];
+
+  const hasInvalidLine = lines.some((line) => {
+    const [title, , url] = line.split("|").map((part) => part.trim());
+    return !title || !url || !isValidHttpUrl(url);
+  });
+
+  if (hasInvalidLine) {
+    errors.push(`${label} debe usar el formato: Título | Descripción | URL | Tipo con enlaces válidos.`);
+    field?.classList.add("input-error");
+  }
+
+  return parseResourceItems(value);
+}
+
+function validateUrlField(selector, label, errors) {
+  const field = document.querySelector(selector);
+  const value = field?.value.trim() || "";
+
+  field?.classList.remove("input-error");
+  if (!value) return value;
+
+  if (!isValidHttpUrl(value)) {
+    errors.push(`${label} debe ser un enlace válido.`);
+    field?.classList.add("input-error");
+  }
+
+  return value;
+}
+
+function isServiceInactive(serviceData) {
+  return serviceData.active === false;
+}
+
+async function toggleServiceStatus(serviceData) {
+  const nextActive = serviceData.active === false;
+  await setServiceActive(serviceData.id, nextActive);
+  rawService = { ...serviceData, active: nextActive };
+  showDetailToast(nextActive ? "Servicio activado" : "Servicio desactivado");
+  renderServiceDetail(rawService);
+}
+
 function renderCards(items) {
   return items
     .map(
@@ -78,6 +311,191 @@ function renderProcedures(items) {
     .join("");
 }
 
+function renderChecklist(items = []) {
+  if (!items.length) return "";
+
+  return `
+    <section class="checklist-section" aria-labelledby="checklist-title">
+      <div class="section-heading-inline">
+        <h2 id="checklist-title">Checklist antes de iniciar</h2>
+        <p>Marca lo que ya tienes listo. Esta lista no modifica tus datos.</p>
+      </div>
+      <ul class="checklist-list">
+        ${items
+          .map(
+            (item, index) => `
+              <li>
+                <label class="checklist-item">
+                  <input type="checkbox" aria-label="${escapeHtml(item.title)}" />
+                  <span>
+                    <strong>${escapeHtml(item.title)}</strong>
+                    <small>${escapeHtml(item.description)}</small>
+                  </span>
+                </label>
+              </li>
+            `,
+          )
+          .join("")}
+      </ul>
+    </section>
+  `;
+}
+
+function renderResources(items = []) {
+  if (!items.length) return "";
+
+  return `
+    <section class="resources-section" aria-labelledby="resources-title">
+      <h2 id="resources-title">Recursos útiles</h2>
+      <div class="resources-grid">
+        ${items
+          .map(
+            (item) => `
+              <article class="resource-card">
+                <span>${escapeHtml(item.type || "recurso")}</span>
+                <h3>${escapeHtml(item.title)}</h3>
+                <p>${escapeHtml(item.description)}</p>
+                <a href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">
+                  Abrir recurso →
+                </a>
+              </article>
+            `,
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
+function fillAdminServiceForm(service) {
+  document.querySelector("#admin-edit-name").value = service.name || "";
+  document.querySelector("#admin-edit-description").value = service.description || "";
+  document.querySelector("#admin-edit-short-description").value = service.shortDescription || "";
+  document.querySelector("#admin-edit-official-url").value = service.officialUrl || "";
+  document.querySelector("#admin-edit-requirements").value = formatSectionItems(service.requirements);
+  document.querySelector("#admin-edit-documents").value = formatSectionItems(service.documents);
+  document.querySelector("#admin-edit-steps").value = formatSectionItems(service.steps);
+  document.querySelector("#admin-edit-channels").value = formatSectionItems(service.channels);
+  document.querySelector("#admin-edit-resources").value = formatResourceItems(service.resources);
+  document.querySelector("#admin-edit-checklist").value = formatSectionItems(service.checklist);
+}
+
+function renderAdminEditor(data) {
+  if (!isAdminUser()) return "";
+
+  return `
+    <section class="admin-service-editor" id="admin-service-editor" aria-labelledby="admin-editor-title" hidden>
+      <div class="admin-service-editor-heading">
+        <div>
+          <p>Administración</p>
+          <h2 id="admin-editor-title">Editar contenido del servicio</h2>
+        </div>
+        <div class="admin-editor-heading-actions">
+          <span>Guardado en Firestore</span>
+          <button type="button" id="admin-close-editor" aria-label="Cerrar editor">×</button>
+        </div>
+      </div>
+      <form class="admin-service-form" id="admin-service-form">
+        <label>
+          Título
+          <input id="admin-edit-name" type="text" value="${escapeHtml(data.name)}" />
+        </label>
+        <section class="admin-image-field" aria-labelledby="admin-image-title">
+          <div class="admin-image-field-copy">
+            <p id="admin-image-title">Imagen del servicio</p>
+            <span>Sube una nueva portada o conserva la imagen actual.</span>
+          </div>
+          <div class="admin-image-field-layout">
+            ${getServiceImageMarkup(data, "admin-service-image-preview", `Vista previa de ${data.name}`)}
+            <div class="admin-image-field-actions">
+              <input id="admin-edit-image-file" type="file" accept="image/png, image/jpeg, image/webp, image/svg+xml" />
+              <input id="admin-edit-image-data" type="hidden" value="${escapeHtml(data.image || "")}" />
+              <button type="button" id="admin-clear-image">Quitar imagen personalizada</button>
+            </div>
+          </div>
+        </section>
+        <label>
+          Descripción principal
+          <textarea id="admin-edit-description">${escapeHtml(data.description)}</textarea>
+        </label>
+        <label>
+          Descripción corta para catálogo
+          <textarea id="admin-edit-short-description">${escapeHtml(data.shortDescription)}</textarea>
+        </label>
+        <label>
+          Canal oficial
+          <input id="admin-edit-official-url" type="url" value="${escapeHtml(data.officialUrl || "")}" placeholder="https://www.gob.pe/..." />
+        </label>
+        <section class="admin-ai-refresh" aria-labelledby="admin-ai-refresh-title">
+          <div class="admin-ai-refresh-copy">
+            <p id="admin-ai-refresh-title">Actualizar con IA</p>
+            <span>Pega enlaces o notas verificadas para regenerar este borrador sin salir del editor.</span>
+          </div>
+          <textarea id="admin-edit-ai-sources" placeholder="https://www.gob.pe/...
+
+Opcional: agrega notas o nuevas fuentes para mejorar el borrador."></textarea>
+          <div class="admin-ai-refresh-actions">
+            <button type="button" id="admin-refresh-with-ai">Usar enlaces con IA</button>
+          </div>
+        </section>
+        <label>
+          Requisitos
+          <textarea id="admin-edit-requirements" aria-describedby="admin-editor-help">${escapeHtml(formatSectionItems(data.requirements))}</textarea>
+        </label>
+        <label>
+          Documentos
+          <textarea id="admin-edit-documents">${escapeHtml(formatSectionItems(data.documents))}</textarea>
+        </label>
+        <label>
+          Pasos
+          <textarea id="admin-edit-steps">${escapeHtml(formatSectionItems(data.steps))}</textarea>
+        </label>
+        <label>
+          Canales de atención
+          <textarea id="admin-edit-channels">${escapeHtml(formatSectionItems(data.channels))}</textarea>
+        </label>
+        <label>
+          Recursos útiles
+          <textarea id="admin-edit-resources" placeholder="Título | Descripción | URL | Tipo">${escapeHtml(formatResourceItems(data.resources))}</textarea>
+        </label>
+        <label>
+          Checklist
+          <textarea id="admin-edit-checklist" placeholder="Título | Descripción">${escapeHtml(formatSectionItems(data.checklist))}</textarea>
+        </label>
+        <p class="admin-editor-help" id="admin-editor-help">
+          Escribe cada elemento en una línea. Listas: Título | Descripción. Recursos: Título | Descripción | URL | Tipo.
+        </p>
+        <ul class="admin-validation-list" id="admin-validation-list" hidden></ul>
+        <div class="admin-service-form-actions">
+          <button type="submit">Guardar cambios</button>
+          <button type="button" id="admin-reset-draft">Restablecer formulario</button>
+        </div>
+        <p class="admin-editor-message" id="admin-editor-message" aria-live="polite"></p>
+      </form>
+    </section>
+  `;
+}
+
+function renderAdminPanel(data) {
+  if (!isAdminUser()) return "";
+
+  return `
+    <section class="admin-detail-panel" aria-labelledby="admin-panel-title">
+      <div>
+        <p>Administración</p>
+        <h2 id="admin-panel-title">Gestión del servicio</h2>
+        <span>${isServiceInactive(data) ? "Este servicio está oculto para usuarios." : "Este servicio está publicado en el catálogo."}</span>
+      </div>
+      <div class="admin-detail-panel-actions">
+        <button type="button" id="admin-open-editor">Editar contenido</button>
+        <button class="detail-admin-toggle" type="button">
+          ${isServiceInactive(data) ? "Activar servicio" : "Desactivar servicio"}
+        </button>
+      </div>
+    </section>
+  `;
+}
+
 function renderNotFound() {
   detailRoot.innerHTML = `
     <section class="detail-empty" aria-labelledby="detail-empty-title">
@@ -90,6 +508,14 @@ function renderNotFound() {
 
 function renderServiceDetail(data) {
   document.title = `${data.name} | CercaRed`;
+  window.CercaRedCurrentService = data;
+
+  const currentService = {
+    id: data.id,
+    name: data.name,
+    category: data.category
+  };
+  localStorage.setItem('cercared_last_visited', JSON.stringify(currentService));
 
   detailRoot.innerHTML = `
     <div class="detail-layout">
@@ -100,10 +526,17 @@ function renderServiceDetail(data) {
           <span>${data.name}</span>
         </nav>
 
+        ${renderAdminPanel(data)}
+
         <section class="detail-hero" aria-labelledby="detail-title">
-          <h1 id="detail-title">${data.name}</h1>
-          <p>${data.description}</p>
+          <div class="detail-hero-copy">
+            <h1 id="detail-title">${data.name}</h1>
+            <p>${data.description}</p>
+          </div>
+          ${getServiceImageMarkup(data, "detail-hero-image", `Imagen de ${data.name}`)}
         </section>
+
+        ${renderAdminEditor(data)}
 
         <div class="detail-columns">
           <section aria-labelledby="requirements-title">
@@ -140,12 +573,8 @@ function renderServiceDetail(data) {
           </section>
         </div>
 
-        <section class="channels-section" aria-labelledby="channels-title">
-          <h2 id="channels-title">Canales de atención</h2>
-          <ul class="channels-list">
-            ${renderChannels(data.channels)}
-          </ul>
-        </section>
+        ${renderChecklist(data.checklist)}
+        ${renderResources(data.resources)}
 
         <a class="official-channel" href="${data.officialUrl}" target="_blank" rel="noreferrer">
           Ir al canal oficial →
@@ -179,6 +608,13 @@ function renderServiceDetail(data) {
           </dl>
         </section>
 
+        <section class="sidebar-card sidebar-channels-card" aria-labelledby="sidebar-channels-title">
+          <h2 id="sidebar-channels-title">Canales de atención</h2>
+          <ul class="channels-list">
+            ${renderChannels(data.channels)}
+          </ul>
+        </section>
+
         <section class="sidebar-card summary-card">
           <h2>Resumen del trámite</h2>
           <p>
@@ -192,11 +628,14 @@ function renderServiceDetail(data) {
           <button class="detail-save-button" type="button" aria-pressed="false">Guardar</button>
           <button class="detail-share-button" type="button">Compartir</button>
         </div>
+
       </aside>
     </div>
   `;
 
   wireDetailActions(data);
+  wireImageFallbacks(detailRoot);
+  window.dispatchEvent(new CustomEvent("cercared:service-rendered", { detail: data }));
 }
 
 function getShareUrl(serviceId) {
@@ -211,6 +650,7 @@ function toSavedService(data) {
     entity: data.entity,
     category: data.category,
     description: data.shortDescription,
+    image: data.image || "",
     url: getShareUrl(data.id),
   };
 }
@@ -218,7 +658,9 @@ function toSavedService(data) {
 function buildSummary(data) {
   const requirements = data.requirements.map((item) => `- ${item.title}`).join("\n");
   const steps = data.steps.map((item, index) => `${index + 1}. ${item.title}`).join("\n");
-  return `${data.name}\n\nRequisitos principales:\n${requirements}\n\nPasos:\n${steps}\n\nCanal oficial: ${data.officialUrl}`;
+  const checklist = (data.checklist || []).map((item) => `- ${item.title}`).join("\n");
+  const resources = (data.resources || []).map((item) => `- ${item.title}: ${item.url}`).join("\n");
+  return `${data.name}\n\nRequisitos principales:\n${requirements}\n\nPasos:\n${steps}${checklist ? `\n\nChecklist:\n${checklist}` : ""}${resources ? `\n\nRecursos utiles:\n${resources}` : ""}\n\nCanal oficial: ${data.officialUrl}`;
 }
 
 function showDetailToast(message) {
@@ -256,6 +698,45 @@ function wireDetailActions(data) {
   const saveButton = document.querySelector(".detail-save-button");
   const shareButton = document.querySelector(".detail-share-button");
   const summaryButton = document.querySelector(".summary-button");
+  const adminToggleButton = document.querySelector(".detail-admin-toggle");
+  const adminOpenButton = document.querySelector("#admin-open-editor");
+  const adminCloseButton = document.querySelector("#admin-close-editor");
+  const adminEditor = document.querySelector("#admin-service-editor");
+  const adminForm = document.querySelector("#admin-service-form");
+  const adminResetButton = document.querySelector("#admin-reset-draft");
+  const validationList = document.querySelector("#admin-validation-list");
+  const imageInput = document.querySelector("#admin-edit-image-file");
+  const imageData = document.querySelector("#admin-edit-image-data");
+  const imagePreview = document.querySelector(".admin-service-image-preview");
+  const clearImageButton = document.querySelector("#admin-clear-image");
+  const aiRefreshButton = document.querySelector("#admin-refresh-with-ai");
+  const aiSourcesField = document.querySelector("#admin-edit-ai-sources");
+
+  function openAdminEditor() {
+    if (!adminEditor) return;
+    adminEditor.hidden = false;
+    adminEditor.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.querySelector("#admin-edit-name")?.focus();
+  }
+
+  function closeAdminEditor() {
+    if (!adminEditor) return;
+    adminEditor.hidden = true;
+    document.querySelector("#admin-open-editor")?.focus();
+  }
+
+  function renderValidationErrors(errors) {
+    if (!validationList) return;
+
+    validationList.replaceChildren(
+      ...errors.map((error) => {
+        const item = document.createElement("li");
+        item.textContent = error;
+        return item;
+      }),
+    );
+    validationList.hidden = errors.length === 0;
+  }
 
   function updateSaveState() {
     const saved = window.CercaRedSaved?.isSaved(savedService) || false;
@@ -286,6 +767,139 @@ function wireDetailActions(data) {
   });
 
   summaryButton.addEventListener("click", () => openSummaryModal(data));
+
+  adminOpenButton?.addEventListener("click", openAdminEditor);
+  adminCloseButton?.addEventListener("click", closeAdminEditor);
+
+  if (window.location.hash === "#admin-service-editor") {
+    window.requestAnimationFrame(openAdminEditor);
+  }
+
+  adminToggleButton?.addEventListener("click", () => {
+    toggleServiceStatus(data).catch((error) => {
+      console.error(error);
+      showDetailToast("No se pudo cambiar el estado");
+    });
+  });
+
+  adminForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const errors = [];
+    const updates = {
+      name: validateTextField("#admin-edit-name", "Título", errors),
+      description: validateTextField("#admin-edit-description", "Descripción principal", errors),
+      shortDescription: validateTextField("#admin-edit-short-description", "Descripción corta", errors),
+      officialUrl: validateUrlField("#admin-edit-official-url", "Canal oficial", errors) || "#",
+      requirements: validateSectionField("#admin-edit-requirements", "Requisitos", errors),
+      documents: validateSectionField("#admin-edit-documents", "Documentos", errors),
+      steps: validateSectionField("#admin-edit-steps", "Pasos", errors),
+      channels: validateSectionField("#admin-edit-channels", "Canales de atención", errors),
+      resources: validateResourceField("#admin-edit-resources", "Recursos útiles", errors),
+      checklist: validateOptionalSectionField("#admin-edit-checklist", "Checklist", errors),
+      image: imageData?.value.trim() || "",
+    };
+
+    renderValidationErrors(errors);
+    if (errors.length > 0) {
+      showDetailToast("Revisa los campos marcados");
+      return;
+    }
+
+    try {
+      await updateService(data.id, updates);
+      rawService = { ...data, ...updates };
+      showDetailToast("Cambios guardados");
+      renderServiceDetail(rawService);
+      document.querySelector("#admin-service-editor")?.scrollIntoView({ behavior: "smooth" });
+    } catch (error) {
+      console.error(error);
+      showDetailToast("No se pudo guardar en Firestore");
+    }
+  });
+
+  adminResetButton?.addEventListener("click", () => {
+    renderValidationErrors([]);
+    document.querySelectorAll(".admin-service-form .input-error").forEach((field) => {
+      field.classList.remove("input-error");
+    });
+    showDetailToast("Formulario restablecido");
+    renderServiceDetail(data);
+    window.requestAnimationFrame(openAdminEditor);
+  });
+
+  imageInput?.addEventListener("change", async () => {
+    try {
+      const file = imageInput.files?.[0];
+      const image = await readImageFile(file);
+      if (imageData) imageData.value = image;
+      updateImagePreview(imagePreview, {
+        id: data.id,
+        name: document.querySelector("#admin-edit-name")?.value || data.name,
+        image,
+      });
+      showDetailToast(file ? "Imagen cargada" : "Imagen restablecida");
+    } catch (error) {
+      imageInput.value = "";
+      if (imageData) imageData.value = data.image || "";
+      updateImagePreview(imagePreview, {
+        id: data.id,
+        name: data.name,
+        image: data.image || "",
+      });
+      showDetailToast(error.message);
+    }
+  });
+
+  clearImageButton?.addEventListener("click", () => {
+    if (imageInput) imageInput.value = "";
+    if (imageData) imageData.value = "";
+    updateImagePreview(imagePreview, {
+      id: data.id,
+      name: document.querySelector("#admin-edit-name")?.value || data.name,
+    });
+    showDetailToast("Se quitó la imagen personalizada");
+  });
+
+  aiRefreshButton?.addEventListener("click", async () => {
+    const sources = aiSourcesField?.value.trim() || "";
+    if (!sources) {
+      aiSourcesField?.classList.add("input-error");
+      showDetailToast("Pega al menos un enlace o nota para usar la IA");
+      return;
+    }
+
+    aiSourcesField?.classList.remove("input-error");
+    aiRefreshButton.disabled = true;
+    aiRefreshButton.textContent = "Generando...";
+
+    try {
+      const response = await fetch("/api/generate-service-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sources }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "No se pudo generar el borrador.");
+
+      const mergedService = {
+        ...data,
+        ...payload.service,
+        id: data.id,
+        image: imageData?.value.trim() || data.image || "",
+      };
+      fillAdminServiceForm(mergedService);
+      renderValidationErrors([]);
+      showDetailToast(payload.warnings?.length
+        ? "Borrador actualizado con advertencias"
+        : "Borrador actualizado con IA");
+    } catch (error) {
+      console.error(error);
+      showDetailToast(error.message || "No se pudo actualizar el borrador");
+    } finally {
+      aiRefreshButton.disabled = false;
+      aiRefreshButton.textContent = "Usar enlaces con IA";
+    }
+  });
 }
 
 function buildSummaryModal(data) {
@@ -309,6 +923,14 @@ function buildSummaryModal(data) {
  
   const channelItems = data.channels
     .map((c) => `<li class="summary-modal-channel">${c.title}. ${c.description}</li>`)
+    .join("");
+
+  const checklistItems = (data.checklist || [])
+    .map((c) => `<li class="summary-modal-channel">${c.title}. ${c.description}</li>`)
+    .join("");
+
+  const resourceItems = (data.resources || [])
+    .map((r) => `<li class="summary-modal-channel">${r.title}. ${r.url}</li>`)
     .join("");
  
   return `
@@ -354,6 +976,23 @@ function buildSummaryModal(data) {
             <ul class="summary-modal-channels">${channelItems}</ul>
           </div>
         </div>
+
+        ${(checklistItems || resourceItems) ? `
+          <div class="summary-modal-grid">
+            ${checklistItems ? `
+              <div>
+                <h3 class="summary-modal-section-title">Checklist</h3>
+                <ul class="summary-modal-channels">${checklistItems}</ul>
+              </div>
+            ` : ""}
+            ${resourceItems ? `
+              <div>
+                <h3 class="summary-modal-section-title">Recursos utiles</h3>
+                <ul class="summary-modal-channels">${resourceItems}</ul>
+              </div>
+            ` : ""}
+          </div>
+        ` : ""}
  
         <div class="summary-modal-actions">
           <button class="summary-modal-copy" type="button" id="summary-modal-copy-btn">
@@ -463,6 +1102,9 @@ function downloadSummaryPDF(data) {
         if (titulo === "CANALES DE ATENCIÓN") {
           textoLinea = `• ${item.title}: ${item.description}`;
         }
+        if (titulo === "RECURSOS ÚTILES") {
+          textoLinea = `• ${item.title}: ${item.url}`;
+        }
         const lineasFragmentadas = doc.splitTextToSize(textoLinea, 175);
         doc.text(lineasFragmentadas, 18, currentY);
         currentY += (lineasFragmentadas.length * 5);
@@ -480,6 +1122,8 @@ function downloadSummaryPDF(data) {
   agregarSeccion("DOCUMENTOS BÁSICOS", data.documents, true);
   agregarSeccion("PASOS", data.steps, false);
   agregarSeccion("CANALES DE ATENCIÓN", data.channels, true);
+  agregarSeccion("CHECKLIST", data.checklist, true);
+  agregarSeccion("RECURSOS ÚTILES", data.resources, true);
 
   if (currentY > 260) {
     doc.addPage();
@@ -502,9 +1146,6 @@ function downloadSummaryPDF(data) {
   showDetailToast("Resumen descargado");
 }
 
-// ==========================================================================
-// FASE B: ANALYTICS - FUNCIÓN DE CONTROL DE CLICS (SILENCIOSA)
-// ==========================================================================
 async function trackServiceVisit(serviceData) {
   if (!serviceData || !serviceData.id) return;
   try {
@@ -521,12 +1162,16 @@ async function trackServiceVisit(serviceData) {
   }
 }
 
-// ==========================================================================
-// FLUJO DE INICIALIZACIÓN DE LA PÁGINA
-// ==========================================================================
-if (service) {
-  renderServiceDetail(service);
-  trackServiceVisit(service); // <-- DISPARADOR AUTOMÁTICO SILENCIOSO DE MÉTRICAS
-} else {
-  renderNotFound();
+async function initDetail() {
+  const services = await loadServices();
+  rawService = services.find((item) => item.id === serviceId);
+
+  if (rawService && (isAdminUser() || !isServiceInactive(rawService))) {
+    renderServiceDetail(rawService);
+    trackServiceVisit(rawService);
+  } else {
+    renderNotFound();
+  }
 }
+
+initDetail();
