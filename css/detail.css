@@ -937,7 +937,14 @@
 
 @media (max-width: 900px) {
   .simple-mode-button {
-    display: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    order: 2;
+    min-height: 44px;
+    padding: 0 14px;
+    font-size: 14px;
+    white-space: nowrap;
   }
 }
 
@@ -1008,6 +1015,11 @@
 
   .resources-grid {
     grid-template-columns: 1fr;
+  }
+
+  .simple-mode-button {
+    padding: 0 12px;
+    font-size: 13px;
   }
 }
 .summary-modal-overlay {
