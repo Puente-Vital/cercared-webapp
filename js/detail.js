@@ -602,12 +602,6 @@ function renderChannels(items) {
     .join("");
 }
 
-function renderProcedures(items) {
-  return items
-    .map((item) => `<option value="${item.value}">${item.label}</option>`)
-    .join("");
-}
-
 function renderChecklist(items = []) {
   if (!items.length) return "";
 
@@ -933,16 +927,6 @@ function renderServiceDetail(data) {
             <ol class="steps-list">
               ${renderSteps(data.steps)}
             </ol>
-          </section>
-
-          <section aria-labelledby="procedure-title">
-            <h2 id="procedure-title">Procedimiento municipal disponible</h2>
-            <label class="procedure-select">
-              <span class="visually-hidden">Seleccionar procedimiento municipal</span>
-              <select>
-                ${renderProcedures(data.procedures)}
-              </select>
-            </label>
           </section>
         </div>
 

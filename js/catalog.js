@@ -695,12 +695,6 @@ function createServiceFromForm() {
     requirements,
     documents,
     steps,
-    procedures: [
-      {
-        value: "procedimiento-general",
-        label: "Procedimiento general",
-      },
-    ],
     channels,
     resources,
     checklist,

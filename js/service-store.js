@@ -115,12 +115,6 @@ function normalizeService(service) {
     requirements: service.requirements || [],
     documents: service.documents || [],
     steps: service.steps || [],
-    procedures: service.procedures || [
-      {
-        value: "procedimiento-general",
-        label: "Procedimiento general",
-      },
-    ],
     channels: service.channels || [],
     resources: service.resources || [],
     checklist: service.checklist || [],
