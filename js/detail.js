@@ -231,6 +231,21 @@ function validateResourceField(selector, label, errors) {
   return parseResourceItems(value);
 }
 
+function validateUrlField(selector, label, errors) {
+  const field = document.querySelector(selector);
+  const value = field?.value.trim() || "";
+
+  field?.classList.remove("input-error");
+  if (!value) return value;
+
+  if (!isValidHttpUrl(value)) {
+    errors.push(`${label} debe ser un enlace válido.`);
+    field?.classList.add("input-error");
+  }
+
+  return value;
+}
+
 function isServiceInactive(serviceData) {
   return serviceData.active === false;
 }
@@ -352,6 +367,19 @@ function renderResources(items = []) {
   `;
 }
 
+function fillAdminServiceForm(service) {
+  document.querySelector("#admin-edit-name").value = service.name || "";
+  document.querySelector("#admin-edit-description").value = service.description || "";
+  document.querySelector("#admin-edit-short-description").value = service.shortDescription || "";
+  document.querySelector("#admin-edit-official-url").value = service.officialUrl || "";
+  document.querySelector("#admin-edit-requirements").value = formatSectionItems(service.requirements);
+  document.querySelector("#admin-edit-documents").value = formatSectionItems(service.documents);
+  document.querySelector("#admin-edit-steps").value = formatSectionItems(service.steps);
+  document.querySelector("#admin-edit-channels").value = formatSectionItems(service.channels);
+  document.querySelector("#admin-edit-resources").value = formatResourceItems(service.resources);
+  document.querySelector("#admin-edit-checklist").value = formatSectionItems(service.checklist);
+}
+
 function renderAdminEditor(data) {
   if (!isAdminUser()) return "";
 
@@ -364,7 +392,7 @@ function renderAdminEditor(data) {
         </div>
         <div class="admin-editor-heading-actions">
           <span>Guardado en Firestore</span>
-          <button type="button" id="admin-close-editor">Cerrar editor</button>
+          <button type="button" id="admin-close-editor" aria-label="Cerrar editor">×</button>
         </div>
       </div>
       <form class="admin-service-form" id="admin-service-form">
@@ -394,6 +422,22 @@ function renderAdminEditor(data) {
           Descripción corta para catálogo
           <textarea id="admin-edit-short-description">${escapeHtml(data.shortDescription)}</textarea>
         </label>
+        <label>
+          Canal oficial
+          <input id="admin-edit-official-url" type="url" value="${escapeHtml(data.officialUrl || "")}" placeholder="https://www.gob.pe/..." />
+        </label>
+        <section class="admin-ai-refresh" aria-labelledby="admin-ai-refresh-title">
+          <div class="admin-ai-refresh-copy">
+            <p id="admin-ai-refresh-title">Actualizar con IA</p>
+            <span>Pega enlaces o notas verificadas para regenerar este borrador sin salir del editor.</span>
+          </div>
+          <textarea id="admin-edit-ai-sources" placeholder="https://www.gob.pe/...
+
+Opcional: agrega notas o nuevas fuentes para mejorar el borrador."></textarea>
+          <div class="admin-ai-refresh-actions">
+            <button type="button" id="admin-refresh-with-ai">Usar enlaces con IA</button>
+          </div>
+        </section>
         <label>
           Requisitos
           <textarea id="admin-edit-requirements" aria-describedby="admin-editor-help">${escapeHtml(formatSectionItems(data.requirements))}</textarea>
@@ -665,6 +709,8 @@ function wireDetailActions(data) {
   const imageData = document.querySelector("#admin-edit-image-data");
   const imagePreview = document.querySelector(".admin-service-image-preview");
   const clearImageButton = document.querySelector("#admin-clear-image");
+  const aiRefreshButton = document.querySelector("#admin-refresh-with-ai");
+  const aiSourcesField = document.querySelector("#admin-edit-ai-sources");
 
   function openAdminEditor() {
     if (!adminEditor) return;
@@ -743,6 +789,7 @@ function wireDetailActions(data) {
       name: validateTextField("#admin-edit-name", "Título", errors),
       description: validateTextField("#admin-edit-description", "Descripción principal", errors),
       shortDescription: validateTextField("#admin-edit-short-description", "Descripción corta", errors),
+      officialUrl: validateUrlField("#admin-edit-official-url", "Canal oficial", errors) || "#",
       requirements: validateSectionField("#admin-edit-requirements", "Requisitos", errors),
       documents: validateSectionField("#admin-edit-documents", "Documentos", errors),
       steps: validateSectionField("#admin-edit-steps", "Pasos", errors),
@@ -811,6 +858,47 @@ function wireDetailActions(data) {
       name: document.querySelector("#admin-edit-name")?.value || data.name,
     });
     showDetailToast("Se quitó la imagen personalizada");
+  });
+
+  aiRefreshButton?.addEventListener("click", async () => {
+    const sources = aiSourcesField?.value.trim() || "";
+    if (!sources) {
+      aiSourcesField?.classList.add("input-error");
+      showDetailToast("Pega al menos un enlace o nota para usar la IA");
+      return;
+    }
+
+    aiSourcesField?.classList.remove("input-error");
+    aiRefreshButton.disabled = true;
+    aiRefreshButton.textContent = "Generando...";
+
+    try {
+      const response = await fetch("/api/generate-service-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sources }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "No se pudo generar el borrador.");
+
+      const mergedService = {
+        ...data,
+        ...payload.service,
+        id: data.id,
+        image: imageData?.value.trim() || data.image || "",
+      };
+      fillAdminServiceForm(mergedService);
+      renderValidationErrors([]);
+      showDetailToast(payload.warnings?.length
+        ? "Borrador actualizado con advertencias"
+        : "Borrador actualizado con IA");
+    } catch (error) {
+      console.error(error);
+      showDetailToast(error.message || "No se pudo actualizar el borrador");
+    } finally {
+      aiRefreshButton.disabled = false;
+      aiRefreshButton.textContent = "Usar enlaces con IA";
+    }
   });
 }
 
