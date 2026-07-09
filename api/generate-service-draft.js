@@ -1,6 +1,9 @@
 const MAX_URLS = 4;
 const MAX_SOURCE_CHARS = 18000;
 const MIN_EXTRACTED_TEXT_LENGTH = 120;
+const MAX_CUSTOM_SECTIONS = 3;
+const MAX_CUSTOM_ITEMS = 8;
+const MAX_SELECT_OPTIONS = 6;
 
 function isPrivateHostname(hostname) {
   const host = hostname.toLowerCase();
@@ -63,6 +66,73 @@ function extractModelText(messageContent) {
     })
     .filter(Boolean)
     .join("\n");
+}
+
+function slugifySectionId(value = "") {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    || "seccion";
+}
+
+function sanitizeCustomSections(customSections = []) {
+  if (!Array.isArray(customSections)) return [];
+
+  return customSections
+    .map((section, index) => {
+      const title = String(section?.title || "").trim().slice(0, 40);
+      const kind = ["text", "items", "resources", "select"].includes(section?.kind)
+        ? section.kind
+        : "text";
+      const baseSection = {
+        id: slugifySectionId(section?.id || title || `seccion-${index + 1}`),
+        title: title || `Sección ${index + 1}`,
+        kind,
+        showInSimple: section?.showInSimple !== false,
+      };
+
+      if (kind === "text") {
+        return {
+          ...baseSection,
+          content: String(section?.content || "").trim(),
+        };
+      }
+
+      if (kind === "select") {
+        const options = Array.isArray(section?.options)
+          ? section.options.map((option) => String(option || "").trim()).filter(Boolean).slice(0, MAX_SELECT_OPTIONS)
+          : [];
+        const value = String(section?.value || options[0] || "").trim();
+        return { ...baseSection, options, value };
+      }
+
+      const items = Array.isArray(section?.items)
+        ? section.items
+          .map((item) => ({
+            title: String(item?.title || "").trim(),
+            description: String(item?.description || "").trim(),
+            ...(kind === "resources"
+              ? {
+                  url: String(item?.url || "").trim(),
+                  type: String(item?.type || "otro").trim() || "otro",
+                }
+              : {}),
+          }))
+          .filter((item) => item.title && (kind === "resources" ? item.url : item.description))
+          .slice(0, MAX_CUSTOM_ITEMS)
+        : [];
+
+      return { ...baseSection, items };
+    })
+    .filter((section) => {
+      if (section.kind === "text") return Boolean(section.content);
+      if (section.kind === "select") return section.options.length > 0;
+      return section.items.length > 0;
+    })
+    .slice(0, MAX_CUSTOM_SECTIONS);
 }
 
 async function fetchUrlText(url) {
@@ -214,8 +284,22 @@ export default async function handler(request, response) {
               "\"steps\":[{\"title\":\"\",\"description\":\"\"}],",
               "\"channels\":[{\"title\":\"\",\"description\":\"\"}],",
               "\"resources\":[{\"title\":\"\",\"description\":\"\",\"url\":\"\",\"type\":\"consulta|información|formulario|cronograma|ubicación|otro\"}],",
-              "\"checklist\":[{\"title\":\"\",\"description\":\"\"}]",
+              "\"checklist\":[{\"title\":\"\",\"description\":\"\"}],",
+              "\"customSections\":[",
+              "  {\"title\":\"Beneficios\",\"kind\":\"items\",\"showInSimple\":true,\"items\":[{\"title\":\"\",\"description\":\"\"}]}",
+              "]",
               "}",
+              "",
+              "Reglas para customSections:",
+              "- Maximo 3 secciones extra.",
+              "- Usa solo kind: text, items, resources, select.",
+              "- No repitas requisitos, documentos, pasos, canales, recursos o checklist en customSections.",
+              "- title debe ser corto y claro.",
+              "- Para text usa { title, kind, showInSimple, content }.",
+              "- Para items usa { title, kind, showInSimple, items:[{title,description}] }.",
+              "- Para resources usa { title, kind, showInSimple, items:[{title,description,url,type}] }.",
+              "- Para select usa { title, kind, showInSimple, options:[...], value:\"\" }.",
+              "- Si no hace falta una seccion extra, devuelve customSections vacio.",
               "",
               "Enlaces enviados por el administrador:",
               urls.length ? urls.join("\n") : "No se enviaron enlaces.",
@@ -238,6 +322,7 @@ export default async function handler(request, response) {
     const text = extractModelText(payload.choices?.[0]?.message?.content);
     const jsonText = text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
     const service = JSON.parse(jsonText);
+    service.customSections = sanitizeCustomSections(service.customSections);
 
     return response.status(200).json({ service, warnings: failedPages });
   } catch (error) {

@@ -324,6 +324,90 @@ body {
   flex-wrap: wrap;
 }
 
+.admin-custom-sections {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.admin-custom-sections-header,
+.admin-custom-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.admin-custom-sections-header h3,
+.admin-custom-section-header h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 18px;
+}
+
+.admin-custom-sections-header p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.admin-custom-sections-header button,
+.admin-custom-section-remove {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border: 1px solid var(--color-primary);
+  border-radius: 10px;
+  color: var(--color-primary);
+  background: var(--color-surface);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-custom-section-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+
+.admin-custom-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.admin-custom-section-toggle {
+  display: flex !important;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 14px !important;
+}
+
+.admin-custom-section-toggle input {
+  width: 18px;
+  min-height: 18px;
+}
+
+.admin-custom-section-body {
+  grid-column: 1 / -1;
+}
+
+.admin-custom-sections-empty {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 22px;
+}
+
 .admin-ai-cancel {
   display: inline-flex;
   min-height: 48px;
@@ -851,6 +935,12 @@ body {
 
   .admin-ai-image-layout {
     grid-template-columns: 1fr;
+  }
+
+  .admin-custom-sections-header,
+  .admin-custom-section-header,
+  .admin-custom-section-grid {
+    display: grid;
   }
 
   .catalog-heading h1 {

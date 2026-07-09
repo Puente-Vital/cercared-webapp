@@ -35,6 +35,23 @@
     return item.description ? `${item.title}. ${item.description}` : item.title;
   }
 
+  function normalizeCustomSections(customSections = []) {
+    if (!Array.isArray(customSections)) return [];
+    return customSections
+      .map((section) => ({
+        id: section?.id || "",
+        title: String(section?.title || "").trim(),
+        kind: section?.kind || "text",
+        content: String(section?.content || "").trim(),
+        items: Array.isArray(section?.items) ? section.items.filter(Boolean) : [],
+        options: Array.isArray(section?.options) ? section.options.filter(Boolean) : [],
+        value: String(section?.value || "").trim(),
+        showInSimple: section?.showInSimple !== false,
+      }))
+      .filter((section) => section.title && section.showInSimple)
+      .slice(0, 2);
+  }
+
   function buildSimpleData(service) {
     const legacy = service.simple || {};
     const requirements = service.checklist?.length ? service.checklist : service.requirements || [];
@@ -53,6 +70,7 @@
       doSteps: steps.length ? steps.map(compactText) : legacy.doSteps || ["Lee la información del servicio.", "Acude o ingresa al canal oficial.", "Consulta el estado de tu solicitud."],
       places: channels.length ? channels.map((channel) => ({ title: channel.title, description: channel.description })) : legacy.places || [],
       resources: service.resources || [],
+      extraSections: normalizeCustomSections(service.customSections),
     };
   }
 
@@ -92,6 +110,20 @@
         ${escapeHtml(resource.title)}
       </a>
     `).join("");
+    const extras = d.extraSections.map((section) => {
+      if (section.kind === "text") {
+        return `<section class="s-card"><h2>${escapeHtml(section.title)}</h2><p class="s-extra-text">${escapeHtml(section.content)}</p></section>`;
+      }
+      if (section.kind === "select") {
+        return `<section class="s-card"><h2>${escapeHtml(section.title)}</h2><label class="s-select"><span class="visually-hidden">${escapeHtml(section.title)}</span><select>${section.options.map((option) => `<option${option === (section.value || section.options[0]) ? " selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select></label></section>`;
+      }
+      if (section.kind === "resources") {
+        return `<section class="s-card"><h2>${escapeHtml(section.title)}</h2>${section.items.slice(0, 3).map((item) => `
+          <a class="s-resource" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">${escapeHtml(item.title)}</a>
+        `).join("")}</section>`;
+      }
+      return `<section class="s-card"><h2>${escapeHtml(section.title)}</h2><ul class="s-needs">${section.items.slice(0, 5).map((item) => `<li>${escapeHtml(compactText(item))}</li>`).join("")}</ul></section>`;
+    }).join("");
     const options = ["<option>Elige tu distrito</option>"].concat(SIMPLE_DISTRITOS.map((d)=>`<option value="${d}">${d}</option>`)).join("");
     return `
       <div class="simple-view">
@@ -109,6 +141,7 @@
           <a class="s-official" href="${escapeHtml(s.officialUrl || "#")}" target="_blank" rel="noreferrer">Ir al canal oficial →</a>
           <button class="s-summary" type="button">Generar resumen para compartir</button>
         </section>
+        ${extras}
       </div>`;
   }
 
