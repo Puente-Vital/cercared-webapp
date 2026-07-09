@@ -1,4 +1,6 @@
 (function () {
+  const ENHANCE_SELECTOR = ".filters select, select.form-input, .procedure-select select, .s-select select";
+
   function enhance(select) {
     if (!select || select.dataset.enhanced) return;
     select.dataset.enhanced = "1";
@@ -60,5 +62,26 @@
     });
   }
 
-  document.querySelectorAll(".filters select, select.form-input").forEach(enhance);
+  function enhanceAll(root = document) {
+    root.querySelectorAll(ENHANCE_SELECTOR).forEach(enhance);
+  }
+
+  enhanceAll();
+
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      mutation.addedNodes.forEach((node) => {
+        if (!(node instanceof HTMLElement)) return;
+        if (node.matches?.(ENHANCE_SELECTOR)) {
+          enhance(node);
+        }
+        enhanceAll(node);
+      });
+    });
+  });
+
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
 })();

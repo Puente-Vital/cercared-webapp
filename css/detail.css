@@ -699,6 +699,85 @@
   box-shadow: none;
 }
 
+.cs-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.cs-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 0 40px 0 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-size: 16px;
+  font-family: inherit;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  background-image: url('/assets/images/Despliegue.png');
+  background-repeat: no-repeat;
+  background-position: calc(100% - 20px) center;
+  background-size: 14px auto;
+}
+
+.cs-wrap.open .cs-btn {
+  border-color: var(--color-primary);
+  box-shadow: var(--focus-ring);
+  background-image: url('/assets/images/DespliegueUp.png');
+}
+
+.cs-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.cs-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 6;
+  display: none;
+  max-height: 280px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.cs-wrap.open .cs-panel {
+  display: block;
+}
+
+.cs-opt {
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 16px;
+}
+
+.cs-opt:hover,
+.cs-opt.is-active {
+  background: var(--color-soft);
+  color: var(--color-primary);
+}
+
 .channels-list {
   border-bottom: 1px solid rgba(203, 213, 225, 0.55);
 }
