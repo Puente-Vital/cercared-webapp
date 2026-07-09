@@ -69,6 +69,10 @@ function createServiceCard(service) {
   article.dataset.serviceId = service.id;
 
   article.innerHTML = `
+    <img class="service-card-image" src="assets/images/cards/${service.id}.jpg" alt="" aria-hidden="true"
+         onerror="if(!this.dataset.t){this.dataset.t='png';this.src='assets/images/cards/${service.id}.png';}
+                  else if(this.dataset.t==='png'){this.dataset.t='webp';this.src='assets/images/cards/${service.id}.webp';}
+                  else{this.dataset.t='def';this.src='assets/images/cards/default.png';this.onerror=null;}">
     <div class="service-card-header">
       <div class="service-card-tags">
         <span class="service-category">${service.category || "General"}</span>

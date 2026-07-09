@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Centro de ayuda de CercaRed. Resuelve tus dudas sobre búsqueda, filtros, servicios guardados y más."
+    />
+    <title>Ayuda | CercaRed</title>
+    <link rel="icon" type="image/png" href="assets/images/logoencabezado.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/navbar.css" />
+    <link rel="stylesheet" href="css/footer.css" />
+    <link rel="stylesheet" href="css/ayuda.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="navbar" aria-label="Navegación principal">
+        <a class="brand" href="index.html" aria-label="CercaRed inicio">
+          <img class="brand-logo" src="assets/images/logo.png" alt="CercaRed" />
+        </a>
+
+        <button
+          class="nav-toggle"
+          type="button"
+          aria-label="Abrir menú"
+          aria-expanded="false"
+          aria-controls="nav-menu"
+        >
+          <img class="nav-toggle-icon" src="assets/icons/menu.svg" alt="" aria-hidden="true" />
+        </button>
+
+        <div class="nav-menu" id="nav-menu">
+          <a href="index.html">Catálogo</a>
+          <a href="saved.html">Guardados</a>
+          <a class="is-active" href="ayuda.html" aria-current="page">Ayuda</a>
+          <a href="auth.html">Acceso</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="main-content">
+      <!-- ── Encabezado ── -->
+      <section class="ayuda-hero" aria-labelledby="ayuda-title">
+        <h1 id="ayuda-title">Centro de ayuda</h1>
+        <p>Encuentra respuestas sobre cómo usar CercaRed.</p>
+
+        <!-- Buscador de preguntas (T19) -->
+        <div class="faq-search-wrapper" role="search">
+          <label class="visually-hidden" for="faq-search">Buscar en la ayuda</label>
+          <div class="faq-search-field">
+            <svg
+              aria-hidden="true"
+              focusable="false"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              id="faq-search"
+              type="search"
+              placeholder="Buscar en ayuda…"
+              autocomplete="off"
+            />
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Guía rápida (T18) ── -->
+      <section class="guia-rapida" aria-labelledby="guia-title">
+        <div class="ayuda-container">
+          <h2 id="guia-title">Guía rápida</h2>
+          <p class="section-subtitle">Aprende a usar las funciones principales de CercaRed.</p>
+
+          <div class="guia-grid">
+
+            <!-- Catálogo -->
+            <article class="guia-card">
+              <div class="guia-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+              </div>
+              <h3>Catálogo</h3>
+              <p class="guia-desc">Busca y filtra servicios sociales disponibles.</p>
+              <ol class="guia-steps">
+                <li>Escribe una palabra clave en el buscador (ej.: "salud", "vivienda", "alimentos")</li>
+                <li>Usa los filtros para afinar por categoría, distrito o modalidad</li>
+                <li>Haz clic en <strong>Ver detalle</strong> para conocer más sobre un servicio</li>
+              </ol>
+            </article>
+
+            <!-- Detalle del servicio -->
+            <article class="guia-card">
+              <div class="guia-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                </svg>
+              </div>
+              <h3>Detalle del servicio</h3>
+              <p class="guia-desc">Conoce todos los requisitos y pasos para acceder a un servicio.</p>
+              <ol class="guia-steps">
+                <li>Abre la tarjeta de un servicio y haz clic en <strong>Ver detalle</strong></li>
+                <li>Revisa los requisitos, documentos necesarios y pasos a seguir</li>
+                <li>Activa el <strong>Modo simple</strong> si prefieres una versión más sencilla</li>
+              </ol>
+            </article>
+
+            <!-- Recursos útiles -->
+            <article class="guia-card">
+              <div class="guia-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                </svg>
+              </div>
+              <h3>Recursos útiles</h3>
+              <p class="guia-desc">Accede a enlaces y teléfonos oficiales de cada servicio.</p>
+              <ol class="guia-steps">
+                <li>En el detalle del servicio, desplázate hasta la sección <strong>Recursos</strong></li>
+                <li>Encuentra el enlace oficial, teléfonos de atención y direcciones</li>
+                <li>Haz clic en el recurso para ir directamente al sitio institucional</li>
+              </ol>
+            </article>
+
+            <!-- Checklist -->
+            <article class="guia-card">
+              <div class="guia-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                </svg>
+              </div>
+              <h3>Checklist</h3>
+              <p class="guia-desc">Lleva el seguimiento de los pasos que ya completaste.</p>
+              <ol class="guia-steps">
+                <li>En el detalle del servicio, ve a la sección <strong>Checklist</strong></li>
+                <li>Marca cada paso que ya hayas completado</li>
+                <li>Tu progreso se guarda automáticamente en el navegador</li>
+              </ol>
+            </article>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ── FAQ (T17 + T19) ── -->
+      <section class="faq-section" aria-labelledby="faq-title">
+        <div class="ayuda-container ayuda-container--narrow">
+          <h2 id="faq-title">Preguntas frecuentes</h2>
+
+          <!-- Filtros por tema (T19) -->
+          <div class="faq-topics" role="group" aria-label="Filtrar preguntas por tema">
+            <button class="topic-btn is-active" data-topic="all" aria-pressed="true">Todos</button>
+            <button class="topic-btn" data-topic="busqueda" aria-pressed="false">Búsqueda</button>
+            <button class="topic-btn" data-topic="filtros" aria-pressed="false">Filtros</button>
+            <button class="topic-btn" data-topic="guardados" aria-pressed="false">Guardados</button>
+            <button class="topic-btn" data-topic="modo-simple" aria-pressed="false">Modo simple</button>
+            <button class="topic-btn" data-topic="acceso" aria-pressed="false">Acceso</button>
+          </div>
+
+          <!-- Lista de preguntas -->
+          <div class="faq-list" id="faq-list" role="list" aria-label="Preguntas frecuentes"></div>
+
+          <!-- Estado vacío de búsqueda -->
+          <div class="faq-empty" id="faq-empty" hidden aria-live="polite">
+            <svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--color-border)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <p>No se encontraron preguntas para "<strong id="faq-empty-query"></strong>".</p>
+            <button class="faq-empty-reset" id="faq-empty-reset" type="button">Ver todas las preguntas</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Contacto / Pie de ayuda ── -->
+      <section class="ayuda-contacto" aria-labelledby="contacto-title">
+        <div class="ayuda-container ayuda-container--narrow">
+          <h2 id="contacto-title">¿No encontraste tu respuesta?</h2>
+          <p>
+            CercaRed es un proyecto estudiantil en desarrollo. Si tienes sugerencias o encontraste
+            un problema, puedes reportarlo a través del repositorio del proyecto.
+          </p>
+          <a
+            class="contacto-btn"
+            href="https://github.com/Puente-Vital/cercared-webapp/issues"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Ir al repositorio
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <main-footer></main-footer>
+
+    <script src="js/navbar.js"></script>
+    <script src="js/footer.js"></script>
+    <script src="js/ayuda.js"></script>
+  </body>
+</html>
