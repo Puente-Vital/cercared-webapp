@@ -400,7 +400,8 @@
 }
 
 .admin-service-form input,
-.admin-service-form textarea {
+.admin-service-form textarea,
+.admin-service-form select {
   width: 100%;
   min-height: 48px;
   padding: 12px 14px;
@@ -412,7 +413,8 @@
 }
 
 .admin-service-form input.input-error,
-.admin-service-form textarea.input-error {
+.admin-service-form textarea.input-error,
+.admin-service-form select.input-error {
   border-color: var(--color-error);
   box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.14);
 }
@@ -420,6 +422,16 @@
 .admin-service-form textarea {
   min-height: 116px;
   resize: vertical;
+}
+
+.admin-service-form select,
+.procedure-select select {
+  appearance: none;
+  padding-right: 44px;
+  background-image: url('/assets/images/Despliegue.png');
+  background-repeat: no-repeat;
+  background-position: calc(100% - 16px) center;
+  background-size: 14px auto;
 }
 
 .admin-custom-sections {
@@ -679,11 +691,12 @@
   min-height: 56px;
   padding: 0 var(--space-4);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
-  color: var(--color-muted);
+  border-radius: 10px;
+  color: var(--color-text);
   background: var(--color-surface);
   font-size: 16px;
   font-weight: 500;
+  box-shadow: none;
 }
 
 .channels-list {
