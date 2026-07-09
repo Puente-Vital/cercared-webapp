@@ -6,6 +6,9 @@ let currentPage = 1;
 const SERVICES_PER_PAGE = 6;
 let currentFilteredServices = [];
 const MAX_IMAGE_SIZE_BYTES = 350_000;
+const MAX_CUSTOM_SECTIONS = 3;
+const MAX_CUSTOM_ITEMS = 8;
+const MAX_SELECT_OPTIONS = 6;
 
 // ========================================================
 // UTILERÍAS Y FORMATO
@@ -97,6 +100,81 @@ function updateImagePreview(preview, serviceLike) {
   if (!preview.src) {
     preview.src = candidates[0];
   }
+}
+
+function slugifySectionId(value = "") {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    || "seccion";
+}
+
+function normalizeCustomSections(customSections = []) {
+  if (!Array.isArray(customSections)) return [];
+
+  return customSections
+    .map((section, index) => {
+      const title = String(section?.title || "").trim().slice(0, 40);
+      const kind = ["text", "items", "resources", "select"].includes(section?.kind)
+        ? section.kind
+        : "text";
+      const id = slugifySectionId(section?.id || title || `seccion-${index + 1}`);
+      const baseSection = {
+        id,
+        title: title || `Sección ${index + 1}`,
+        kind,
+        showInSimple: section?.showInSimple !== false,
+      };
+
+      if (kind === "text") {
+        return {
+          ...baseSection,
+          content: String(section?.content || "").trim(),
+        };
+      }
+
+      if (kind === "select") {
+        const options = Array.isArray(section?.options)
+          ? section.options.map((option) => String(option || "").trim()).filter(Boolean).slice(0, MAX_SELECT_OPTIONS)
+          : [];
+        const value = String(section?.value || options[0] || "").trim();
+        return {
+          ...baseSection,
+          options,
+          value,
+        };
+      }
+
+      const items = Array.isArray(section?.items)
+        ? section.items
+          .map((item) => ({
+            title: String(item?.title || "").trim(),
+            description: String(item?.description || "").trim(),
+            ...(kind === "resources"
+              ? {
+                  url: String(item?.url || "").trim(),
+                  type: String(item?.type || "otro").trim() || "otro",
+                }
+              : {}),
+          }))
+          .filter((item) => item.title && (kind === "resources" ? item.url : item.description))
+          .slice(0, MAX_CUSTOM_ITEMS)
+        : [];
+
+      return {
+        ...baseSection,
+        items,
+      };
+    })
+    .filter((section) => {
+      if (section.kind === "text") return Boolean(section.content);
+      if (section.kind === "select") return section.options.length > 0;
+      return section.items.length > 0;
+    })
+    .slice(0, MAX_CUSTOM_SECTIONS);
 }
 
 // ========================================================
@@ -222,6 +300,79 @@ function formatResourceItems(items = []) {
     .join("\n");
 }
 
+function formatCustomSectionValue(section) {
+  if (!section) return "";
+  if (section.kind === "text") return section.content || "";
+  if (section.kind === "select") return (section.options || []).join("\n");
+  if (section.kind === "resources") return formatResourceItems(section.items || []);
+  return formatSectionItems(section.items || []);
+}
+
+function buildCustomSectionEditor(section = {}, index = 0) {
+  const normalized = normalizeCustomSections([section])[0] || {
+    id: `seccion-${index + 1}`,
+    title: "",
+    kind: "text",
+    content: "",
+    showInSimple: true,
+  };
+  const sectionValue = formatCustomSectionValue(normalized);
+
+  return `
+    <article class="admin-custom-section-card" data-custom-section data-section-id="${escapeHtml(normalized.id)}">
+      <div class="admin-custom-section-header">
+        <h3>Sección extra ${index + 1}</h3>
+        <button type="button" class="admin-custom-section-remove">Quitar</button>
+      </div>
+      <div class="admin-custom-section-grid">
+        <label>
+          Título
+          <input type="text" data-custom-title maxlength="40" value="${escapeHtml(normalized.title)}" placeholder="Beneficios, plazos, sedes..." />
+        </label>
+        <label>
+          Tipo
+          <select data-custom-kind>
+            <option value="text"${normalized.kind === "text" ? " selected" : ""}>Texto</option>
+            <option value="items"${normalized.kind === "items" ? " selected" : ""}>Lista</option>
+            <option value="resources"${normalized.kind === "resources" ? " selected" : ""}>Recursos</option>
+            <option value="select"${normalized.kind === "select" ? " selected" : ""}>Desplegable</option>
+          </select>
+        </label>
+        <label class="admin-custom-section-toggle">
+          <input type="checkbox" data-custom-simple${normalized.showInSimple ? " checked" : ""} />
+          Mostrar en modo simple
+        </label>
+      </div>
+      <label class="admin-custom-section-body">
+        <span data-custom-body-label>${normalized.kind === "text"
+          ? "Contenido"
+          : normalized.kind === "select"
+            ? "Opciones, una por línea"
+            : normalized.kind === "resources"
+              ? "Recursos útiles"
+              : "Elementos"}</span>
+        <textarea
+          data-custom-value
+          data-kind="${escapeHtml(normalized.kind)}"
+          placeholder="${normalized.kind === "text"
+            ? "Escribe un bloque breve y claro."
+            : normalized.kind === "select"
+              ? "Presencial\nVirtual\nMixta"
+              : normalized.kind === "resources"
+                ? "Título | Descripción | URL | Tipo"
+                : "Título | Descripción"}"
+        >${escapeHtml(sectionValue)}</textarea>
+      </label>
+      ${normalized.kind === "select" ? `
+        <label>
+          Valor por defecto
+          <input type="text" data-custom-selected value="${escapeHtml(normalized.value || "")}" placeholder="Debe coincidir con una opción" />
+        </label>
+      ` : ""}
+    </article>
+  `;
+}
+
 function setFieldError(selector, hasError) {
   document.querySelector(selector)?.classList.toggle("input-error", hasError);
 }
@@ -275,6 +426,173 @@ function validateResourceTextarea(selector, label, errors) {
   if (hasInvalidLine) {
     errors.push(`${label}: usa el formato Título | Descripción | URL | Tipo con enlaces válidos.`);
     setFieldError(selector, true);
+  }
+
+  return parseResourceItems(value);
+}
+
+function renderCustomSectionsEditor(container, sections = []) {
+  if (!container) return;
+
+  const normalized = normalizeCustomSections(sections);
+  container.innerHTML = normalized.length
+    ? normalized.map((section, index) => buildCustomSectionEditor(section, index)).join("")
+    : '<p class="admin-custom-sections-empty">La IA puede sugerir hasta 3 secciones extra. También puedes agregarlas manualmente.</p>';
+}
+
+function syncCustomSectionCard(card) {
+  if (!card) return;
+
+  const kind = card.querySelector("[data-custom-kind]")?.value || "text";
+  const label = card.querySelector("[data-custom-body-label]");
+  const textarea = card.querySelector("[data-custom-value]");
+  const selectedField = card.querySelector("[data-custom-selected]")?.closest("label");
+
+  if (label) {
+    label.textContent = kind === "text"
+      ? "Contenido"
+      : kind === "select"
+        ? "Opciones, una por línea"
+        : kind === "resources"
+          ? "Recursos útiles"
+          : "Elementos";
+  }
+
+  if (textarea) {
+    textarea.dataset.kind = kind;
+    textarea.placeholder = kind === "text"
+      ? "Escribe un bloque breve y claro."
+      : kind === "select"
+        ? "Presencial\nVirtual\nMixta"
+        : kind === "resources"
+          ? "Título | Descripción | URL | Tipo"
+          : "Título | Descripción";
+  }
+
+  if (selectedField) {
+    selectedField.hidden = kind !== "select";
+  }
+}
+
+function addCustomSectionEditor(container, section = {}) {
+  if (!container) return;
+  const cards = container.querySelectorAll("[data-custom-section]");
+
+  if (cards.length >= MAX_CUSTOM_SECTIONS) {
+    setAiMessage(`Máximo ${MAX_CUSTOM_SECTIONS} secciones extra para mantener el servicio compacto.`, "warning");
+    return;
+  }
+
+  container.querySelector(".admin-custom-sections-empty")?.remove();
+  container.insertAdjacentHTML("beforeend", buildCustomSectionEditor(section, cards.length));
+  syncCustomSectionCard(container.lastElementChild);
+}
+
+function validateCustomSections(container, errors) {
+  const cards = Array.from(container?.querySelectorAll("[data-custom-section]") || []);
+  const sections = [];
+
+  cards.forEach((card, index) => {
+    const titleField = card.querySelector("[data-custom-title]");
+    const kindField = card.querySelector("[data-custom-kind]");
+    const textarea = card.querySelector("[data-custom-value]");
+    const selectedField = card.querySelector("[data-custom-selected]");
+    const showInSimple = card.querySelector("[data-custom-simple]")?.checked !== false;
+    const title = titleField?.value.trim() || "";
+    const kind = kindField?.value || "text";
+    const rawValue = textarea?.value.trim() || "";
+
+    titleField?.classList.remove("input-error");
+    textarea?.classList.remove("input-error");
+    selectedField?.classList.remove("input-error");
+
+    if (!title) {
+      errors.push(`Sección extra ${index + 1}: el título es obligatorio.`);
+      titleField?.classList.add("input-error");
+      return;
+    }
+
+    if (!rawValue) {
+      errors.push(`Sección "${title}": agrega contenido.`);
+      textarea?.classList.add("input-error");
+      return;
+    }
+
+    if (kind === "text") {
+      sections.push({ id: slugifySectionId(title), title, kind, content: rawValue, showInSimple });
+      return;
+    }
+
+    if (kind === "select") {
+      const options = rawValue.split("\n").map((line) => line.trim()).filter(Boolean).slice(0, MAX_SELECT_OPTIONS);
+      const selectedValue = selectedField?.value.trim() || options[0] || "";
+      if (!options.length) {
+        errors.push(`Sección "${title}": agrega al menos una opción.`);
+        textarea?.classList.add("input-error");
+        return;
+      }
+      if (selectedValue && !options.includes(selectedValue)) {
+        errors.push(`Sección "${title}": el valor por defecto debe coincidir con una opción.`);
+        selectedField?.classList.add("input-error");
+        return;
+      }
+      sections.push({ id: slugifySectionId(title), title, kind, options, value: selectedValue || options[0], showInSimple });
+      return;
+    }
+
+    if (kind === "resources") {
+      const parsedResources = validateInlineResourceSection(rawValue, title, errors);
+      if (!parsedResources) {
+        textarea?.classList.add("input-error");
+        return;
+      }
+      sections.push({ id: slugifySectionId(title), title, kind, items: parsedResources.slice(0, MAX_CUSTOM_ITEMS), showInSimple });
+      return;
+    }
+
+    const parsedItems = validateInlineItemsSection(rawValue, title, errors);
+    if (!parsedItems) {
+      textarea?.classList.add("input-error");
+      return;
+    }
+    sections.push({ id: slugifySectionId(title), title, kind, items: parsedItems.slice(0, MAX_CUSTOM_ITEMS), showInSimple });
+  });
+
+  return normalizeCustomSections(sections);
+}
+
+function validateInlineItemsSection(value, title, errors) {
+  const lines = value.split("\n").map((line) => line.trim()).filter(Boolean);
+  const hasInvalidLine = lines.some((line) => {
+    const [itemTitle, ...descriptionParts] = line.split("|");
+    return !itemTitle?.trim() || !descriptionParts.join("|").trim();
+  });
+
+  if (hasInvalidLine) {
+    errors.push(`Sección "${title}": usa el formato Título | Descripción.`);
+    return null;
+  }
+
+  return parseSectionItems(value);
+}
+
+function validateInlineResourceSection(value, title, errors) {
+  const lines = value.split("\n").map((line) => line.trim()).filter(Boolean);
+  const hasInvalidLine = lines.some((line) => {
+    const [itemTitle, , url] = line.split("|").map((part) => part.trim());
+    if (!itemTitle || !url) return true;
+
+    try {
+      const resourceUrl = new URL(url);
+      return !["http:", "https:"].includes(resourceUrl.protocol);
+    } catch {
+      return true;
+    }
+  });
+
+  if (hasInvalidLine) {
+    errors.push(`Sección "${title}": usa el formato Título | Descripción | URL | Tipo.`);
+    return null;
   }
 
   return parseResourceItems(value);
@@ -350,6 +668,7 @@ function createServiceFromForm() {
   const channels = validateSectionTextarea("#admin-ai-channels", "Canales", errors);
   const resources = validateResourceTextarea("#admin-ai-resources", "Recursos útiles", errors);
   const checklist = validateSectionTextarea("#admin-ai-checklist", "Checklist", errors);
+  const customSections = validateCustomSections(document.querySelector("#admin-ai-custom-sections"), errors);
   const image = document.querySelector("#admin-ai-image-data")?.value.trim() || "";
 
   renderAiValidation(errors);
@@ -385,6 +704,7 @@ function createServiceFromForm() {
     channels,
     resources,
     checklist,
+    customSections,
     image,
   };
 }
@@ -407,6 +727,7 @@ function fillAiServiceForm(service) {
   document.querySelector("#admin-ai-channels").value = formatSectionItems(service.channels);
   document.querySelector("#admin-ai-resources").value = formatResourceItems(service.resources);
   document.querySelector("#admin-ai-checklist").value = formatSectionItems(service.checklist);
+  renderCustomSectionsEditor(document.querySelector("#admin-ai-custom-sections"), service.customSections);
   document.querySelector("#admin-ai-image-data").value = service.image || "";
   updateImagePreview(document.querySelector("#admin-ai-image-preview"), service);
 }
@@ -526,6 +847,16 @@ Opcional: agrega notas, requisitos, canales o costos si la web no se puede leer.
             Checklist
             <textarea id="admin-ai-checklist" placeholder="Verificar requisitos | Confirma edad, clasificación y documentos antes de iniciar."></textarea>
           </label>
+          <section class="admin-custom-sections admin-ai-full" aria-labelledby="admin-custom-sections-title">
+            <div class="admin-custom-sections-header">
+              <div>
+                <h3 id="admin-custom-sections-title">Secciones extra</h3>
+                <p>Máximo 3. Úsalas para beneficios, plazos, sedes, coberturas o campos compactos como desplegables.</p>
+              </div>
+              <button type="button" id="admin-ai-add-section">Agregar sección</button>
+            </div>
+            <div id="admin-ai-custom-sections"></div>
+          </section>
 
           <p class="admin-ai-help admin-ai-full">Formato de listas: Título | Descripción. Recursos: Título | Descripción | URL | Tipo.</p>
           <ul class="admin-ai-validation admin-ai-full" id="admin-ai-validation" hidden></ul>
@@ -552,6 +883,8 @@ function openAiServiceModal() {
   const generateButton = modal.querySelector(".admin-ai-generate");
   const form = modal.querySelector("#admin-ai-form");
   const saveButton = form.querySelector(".admin-ai-save");
+  const customSectionsContainer = modal.querySelector("#admin-ai-custom-sections");
+  const addCustomSectionButton = modal.querySelector("#admin-ai-add-section");
   const imagePreview = modal.querySelector("#admin-ai-image-preview");
   const imageInput = modal.querySelector("#admin-ai-image-file");
   const imageData = modal.querySelector("#admin-ai-image-data");
@@ -565,7 +898,11 @@ function openAiServiceModal() {
 
   const closeWithConfirmation = async () => {
     const hasContent = Array.from(modal.querySelectorAll("input, textarea"))
-      .some((field) => field.type === "file" ? field.files?.length : field.value.trim());
+      .some((field) => {
+        if (field.type === "file") return field.files?.length;
+        if (["checkbox", "radio", "hidden"].includes(field.type)) return false;
+        return field.value.trim();
+      });
     if (!hasContent) {
       closeModal();
       return;
@@ -584,6 +921,7 @@ function openAiServiceModal() {
   };
 
   updateImagePreview(imagePreview, {});
+  renderCustomSectionsEditor(customSectionsContainer, []);
 
   closeButton.addEventListener("click", closeWithConfirmation);
   cancelButton.addEventListener("click", closeWithConfirmation);
@@ -629,6 +967,28 @@ function openAiServiceModal() {
   form.addEventListener("input", () => {
     pendingServiceToSave = null;
     saveButton.textContent = "Agregar al catálogo";
+  });
+
+  addCustomSectionButton.addEventListener("click", () => {
+    addCustomSectionEditor(customSectionsContainer);
+  });
+
+  customSectionsContainer.addEventListener("click", (event) => {
+    const removeButton = event.target.closest(".admin-custom-section-remove");
+    if (!removeButton) return;
+
+    removeButton.closest("[data-custom-section]")?.remove();
+    if (!customSectionsContainer.querySelector("[data-custom-section]")) {
+      renderCustomSectionsEditor(customSectionsContainer, []);
+    }
+  });
+
+  customSectionsContainer.addEventListener("change", (event) => {
+    const card = event.target.closest("[data-custom-section]");
+    if (!card) return;
+    if (event.target.matches("[data-custom-kind]")) {
+      syncCustomSectionCard(card);
+    }
   });
 
   imageInput.addEventListener("change", async () => {

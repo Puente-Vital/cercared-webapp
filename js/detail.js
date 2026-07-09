@@ -6,6 +6,9 @@ const params = new URLSearchParams(window.location.search);
 const serviceId = params.get("id") || "pension-65";
 let rawService = null;
 const MAX_IMAGE_SIZE_BYTES = 350_000;
+const MAX_CUSTOM_SECTIONS = 3;
+const MAX_CUSTOM_ITEMS = 8;
+const MAX_SELECT_OPTIONS = 6;
 
 function getCurrentUser() {
   try {
@@ -109,6 +112,71 @@ function formatResourceItems(items) {
     .join("\n");
 }
 
+function slugifySectionId(value = "") {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    || "seccion";
+}
+
+function normalizeCustomSections(customSections = []) {
+  if (!Array.isArray(customSections)) return [];
+
+  return customSections
+    .map((section, index) => {
+      const title = String(section?.title || "").trim().slice(0, 40);
+      const kind = ["text", "items", "resources", "select"].includes(section?.kind)
+        ? section.kind
+        : "text";
+      const id = slugifySectionId(section?.id || title || `seccion-${index + 1}`);
+      const baseSection = {
+        id,
+        title: title || `Sección ${index + 1}`,
+        kind,
+        showInSimple: section?.showInSimple !== false,
+      };
+
+      if (kind === "text") {
+        return { ...baseSection, content: String(section?.content || "").trim() };
+      }
+
+      if (kind === "select") {
+        const options = Array.isArray(section?.options)
+          ? section.options.map((option) => String(option || "").trim()).filter(Boolean).slice(0, MAX_SELECT_OPTIONS)
+          : [];
+        const value = String(section?.value || options[0] || "").trim();
+        return { ...baseSection, options, value };
+      }
+
+      const items = Array.isArray(section?.items)
+        ? section.items
+          .map((item) => ({
+            title: String(item?.title || "").trim(),
+            description: String(item?.description || "").trim(),
+            ...(kind === "resources"
+              ? {
+                  url: String(item?.url || "").trim(),
+                  type: String(item?.type || "otro").trim() || "otro",
+                }
+              : {}),
+          }))
+          .filter((item) => item.title && (kind === "resources" ? item.url : item.description))
+          .slice(0, MAX_CUSTOM_ITEMS)
+        : [];
+
+      return { ...baseSection, items };
+    })
+    .filter((section) => {
+      if (section.kind === "text") return Boolean(section.content);
+      if (section.kind === "select") return section.options.length > 0;
+      return section.items.length > 0;
+    })
+    .slice(0, MAX_CUSTOM_SECTIONS);
+}
+
 function parseSectionItems(value) {
   return value
     .split("\n")
@@ -139,6 +207,14 @@ function parseResourceItems(value) {
         type: type || "otro",
       };
     });
+}
+
+function formatCustomSectionValue(section) {
+  if (!section) return "";
+  if (section.kind === "text") return section.content || "";
+  if (section.kind === "select") return (section.options || []).join("\n");
+  if (section.kind === "resources") return formatResourceItems(section.items || []);
+  return formatSectionItems(section.items || []);
 }
 
 function isValidHttpUrl(value) {
@@ -229,6 +305,227 @@ function validateResourceField(selector, label, errors) {
   }
 
   return parseResourceItems(value);
+}
+
+function buildCustomSectionEditor(section = {}, index = 0) {
+  const normalized = normalizeCustomSections([section])[0] || {
+    id: `seccion-${index + 1}`,
+    title: "",
+    kind: "text",
+    content: "",
+    showInSimple: true,
+  };
+  const sectionValue = formatCustomSectionValue(normalized);
+
+  return `
+    <article class="admin-custom-section-card" data-custom-section data-section-id="${escapeHtml(normalized.id)}">
+      <div class="admin-custom-section-header">
+        <h3>Sección extra ${index + 1}</h3>
+        <button type="button" class="admin-custom-section-remove">Quitar</button>
+      </div>
+      <div class="admin-custom-section-grid">
+        <label>
+          Título
+          <input type="text" data-custom-title maxlength="40" value="${escapeHtml(normalized.title)}" />
+        </label>
+        <label>
+          Tipo
+          <select data-custom-kind>
+            <option value="text"${normalized.kind === "text" ? " selected" : ""}>Texto</option>
+            <option value="items"${normalized.kind === "items" ? " selected" : ""}>Lista</option>
+            <option value="resources"${normalized.kind === "resources" ? " selected" : ""}>Recursos</option>
+            <option value="select"${normalized.kind === "select" ? " selected" : ""}>Desplegable</option>
+          </select>
+        </label>
+        <label class="admin-custom-section-toggle">
+          <input type="checkbox" data-custom-simple${normalized.showInSimple ? " checked" : ""} />
+          Mostrar en modo simple
+        </label>
+      </div>
+      <label class="admin-custom-section-body">
+        <span data-custom-body-label>${normalized.kind === "text"
+          ? "Contenido"
+          : normalized.kind === "select"
+            ? "Opciones, una por línea"
+            : normalized.kind === "resources"
+              ? "Recursos"
+              : "Elementos"}</span>
+        <textarea
+          data-custom-value
+          data-kind="${escapeHtml(normalized.kind)}"
+          placeholder="${normalized.kind === "text"
+            ? "Escribe un bloque breve y claro."
+            : normalized.kind === "select"
+              ? "Presencial\nVirtual\nMixta"
+              : normalized.kind === "resources"
+                ? "Título | Descripción | URL | Tipo"
+                : "Título | Descripción"}"
+        >${escapeHtml(sectionValue)}</textarea>
+      </label>
+      ${normalized.kind === "select" ? `
+        <label>
+          Valor por defecto
+          <input type="text" data-custom-selected value="${escapeHtml(normalized.value || "")}" />
+        </label>
+      ` : ""}
+    </article>
+  `;
+}
+
+function renderCustomSectionsEditor(container, sections = []) {
+  if (!container) return;
+  const normalized = normalizeCustomSections(sections);
+  container.innerHTML = normalized.length
+    ? normalized.map((section, index) => buildCustomSectionEditor(section, index)).join("")
+    : '<p class="admin-custom-sections-empty">No hay secciones extra. Puedes agregar hasta 3.</p>';
+}
+
+function syncCustomSectionCard(card) {
+  if (!card) return;
+  const kind = card.querySelector("[data-custom-kind]")?.value || "text";
+  const label = card.querySelector("[data-custom-body-label]");
+  const textarea = card.querySelector("[data-custom-value]");
+  const selectedField = card.querySelector("[data-custom-selected]")?.closest("label");
+
+  if (label) {
+    label.textContent = kind === "text"
+      ? "Contenido"
+      : kind === "select"
+        ? "Opciones, una por línea"
+        : kind === "resources"
+          ? "Recursos"
+          : "Elementos";
+  }
+
+  if (textarea) {
+    textarea.dataset.kind = kind;
+    textarea.placeholder = kind === "text"
+      ? "Escribe un bloque breve y claro."
+      : kind === "select"
+        ? "Presencial\nVirtual\nMixta"
+        : kind === "resources"
+          ? "Título | Descripción | URL | Tipo"
+          : "Título | Descripción";
+  }
+
+  if (selectedField) {
+    selectedField.hidden = kind !== "select";
+  }
+}
+
+function addCustomSectionEditor(container, section = {}) {
+  if (!container) return;
+  const cards = container.querySelectorAll("[data-custom-section]");
+  if (cards.length >= MAX_CUSTOM_SECTIONS) {
+    showDetailToast(`Máximo ${MAX_CUSTOM_SECTIONS} secciones extra para mantener la vista compacta.`);
+    return;
+  }
+  container.querySelector(".admin-custom-sections-empty")?.remove();
+  container.insertAdjacentHTML("beforeend", buildCustomSectionEditor(section, cards.length));
+  syncCustomSectionCard(container.lastElementChild);
+}
+
+function validateInlineItemsSection(value, title, errors) {
+  const lines = value.split("\n").map((line) => line.trim()).filter(Boolean);
+  const hasInvalidLine = lines.some((line) => {
+    const [itemTitle, ...descriptionParts] = line.split("|");
+    return !itemTitle?.trim() || !descriptionParts.join("|").trim();
+  });
+
+  if (hasInvalidLine) {
+    errors.push(`Sección "${title}": usa el formato Título | Descripción.`);
+    return null;
+  }
+
+  return parseSectionItems(value);
+}
+
+function validateInlineResourceSection(value, title, errors) {
+  const lines = value.split("\n").map((line) => line.trim()).filter(Boolean);
+  const hasInvalidLine = lines.some((line) => {
+    const [itemTitle, , url] = line.split("|").map((part) => part.trim());
+    return !itemTitle || !url || !isValidHttpUrl(url);
+  });
+
+  if (hasInvalidLine) {
+    errors.push(`Sección "${title}": usa el formato Título | Descripción | URL | Tipo.`);
+    return null;
+  }
+
+  return parseResourceItems(value);
+}
+
+function validateCustomSections(container, errors) {
+  const cards = Array.from(container?.querySelectorAll("[data-custom-section]") || []);
+  const sections = [];
+
+  cards.forEach((card, index) => {
+    const titleField = card.querySelector("[data-custom-title]");
+    const kindField = card.querySelector("[data-custom-kind]");
+    const valueField = card.querySelector("[data-custom-value]");
+    const selectedField = card.querySelector("[data-custom-selected]");
+    const title = titleField?.value.trim() || "";
+    const kind = kindField?.value || "text";
+    const rawValue = valueField?.value.trim() || "";
+    const showInSimple = card.querySelector("[data-custom-simple]")?.checked !== false;
+
+    titleField?.classList.remove("input-error");
+    valueField?.classList.remove("input-error");
+    selectedField?.classList.remove("input-error");
+
+    if (!title) {
+      errors.push(`Sección extra ${index + 1}: el título es obligatorio.`);
+      titleField?.classList.add("input-error");
+      return;
+    }
+
+    if (!rawValue) {
+      errors.push(`Sección "${title}": agrega contenido.`);
+      valueField?.classList.add("input-error");
+      return;
+    }
+
+    if (kind === "text") {
+      sections.push({ id: slugifySectionId(title), title, kind, content: rawValue, showInSimple });
+      return;
+    }
+
+    if (kind === "select") {
+      const options = rawValue.split("\n").map((line) => line.trim()).filter(Boolean).slice(0, MAX_SELECT_OPTIONS);
+      const selectedValue = selectedField?.value.trim() || options[0] || "";
+      if (!options.length) {
+        errors.push(`Sección "${title}": agrega al menos una opción.`);
+        valueField?.classList.add("input-error");
+        return;
+      }
+      if (selectedValue && !options.includes(selectedValue)) {
+        errors.push(`Sección "${title}": el valor por defecto debe coincidir con una opción.`);
+        selectedField?.classList.add("input-error");
+        return;
+      }
+      sections.push({ id: slugifySectionId(title), title, kind, options, value: selectedValue || options[0], showInSimple });
+      return;
+    }
+
+    if (kind === "resources") {
+      const items = validateInlineResourceSection(rawValue, title, errors);
+      if (!items) {
+        valueField?.classList.add("input-error");
+        return;
+      }
+      sections.push({ id: slugifySectionId(title), title, kind, items: items.slice(0, MAX_CUSTOM_ITEMS), showInSimple });
+      return;
+    }
+
+    const items = validateInlineItemsSection(rawValue, title, errors);
+    if (!items) {
+      valueField?.classList.add("input-error");
+      return;
+    }
+    sections.push({ id: slugifySectionId(title), title, kind, items: items.slice(0, MAX_CUSTOM_ITEMS), showInSimple });
+  });
+
+  return normalizeCustomSections(sections);
 }
 
 function validateUrlField(selector, label, errors) {
@@ -367,6 +664,65 @@ function renderResources(items = []) {
   `;
 }
 
+function renderCustomSections(customSections = []) {
+  const sections = normalizeCustomSections(customSections);
+  if (!sections.length) return "";
+
+  return sections
+    .map((section) => {
+      if (section.kind === "text") {
+        return `
+          <section class="custom-section" aria-labelledby="custom-section-${escapeHtml(section.id)}">
+            <h2 id="custom-section-${escapeHtml(section.id)}">${escapeHtml(section.title)}</h2>
+            <div class="custom-section-text">${escapeHtml(section.content)}</div>
+          </section>
+        `;
+      }
+
+      if (section.kind === "select") {
+        return `
+          <section class="custom-section" aria-labelledby="custom-section-${escapeHtml(section.id)}">
+            <h2 id="custom-section-${escapeHtml(section.id)}">${escapeHtml(section.title)}</h2>
+            <label class="procedure-select custom-section-select">
+              <span class="visually-hidden">${escapeHtml(section.title)}</span>
+              <select>
+                ${section.options.map((option) => `<option${option === section.value ? " selected" : ""}>${escapeHtml(option)}</option>`).join("")}
+              </select>
+            </label>
+          </section>
+        `;
+      }
+
+      if (section.kind === "resources") {
+        return `
+          <section class="custom-section" aria-labelledby="custom-section-${escapeHtml(section.id)}">
+            <h2 id="custom-section-${escapeHtml(section.id)}">${escapeHtml(section.title)}</h2>
+            <div class="resources-grid">
+              ${section.items.map((item) => `
+                <article class="resource-card">
+                  <span>${escapeHtml(item.type || "recurso")}</span>
+                  <h3>${escapeHtml(item.title)}</h3>
+                  <p>${escapeHtml(item.description)}</p>
+                  <a href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Abrir recurso →</a>
+                </article>
+              `).join("")}
+            </div>
+          </section>
+        `;
+      }
+
+      return `
+        <section class="custom-section" aria-labelledby="custom-section-${escapeHtml(section.id)}">
+          <h2 id="custom-section-${escapeHtml(section.id)}">${escapeHtml(section.title)}</h2>
+          <div class="stacked-cards">
+            ${renderCards(section.items || [])}
+          </div>
+        </section>
+      `;
+    })
+    .join("");
+}
+
 function fillAdminServiceForm(service) {
   document.querySelector("#admin-edit-name").value = service.name || "";
   document.querySelector("#admin-edit-description").value = service.description || "";
@@ -378,6 +734,7 @@ function fillAdminServiceForm(service) {
   document.querySelector("#admin-edit-channels").value = formatSectionItems(service.channels);
   document.querySelector("#admin-edit-resources").value = formatResourceItems(service.resources);
   document.querySelector("#admin-edit-checklist").value = formatSectionItems(service.checklist);
+  renderCustomSectionsEditor(document.querySelector("#admin-edit-custom-sections"), service.customSections);
 }
 
 function renderAdminEditor(data) {
@@ -462,6 +819,18 @@ Opcional: agrega notas o nuevas fuentes para mejorar el borrador."></textarea>
           Checklist
           <textarea id="admin-edit-checklist" placeholder="Título | Descripción">${escapeHtml(formatSectionItems(data.checklist))}</textarea>
         </label>
+        <section class="admin-custom-sections" aria-labelledby="admin-custom-sections-title">
+          <div class="admin-custom-sections-header">
+            <div>
+              <h3 id="admin-custom-sections-title">Secciones extra</h3>
+              <p>Máximo 3. Úsalas para bloques adicionales compactos y visibles también en el detalle.</p>
+            </div>
+            <button type="button" id="admin-add-custom-section">Agregar sección</button>
+          </div>
+          <div id="admin-edit-custom-sections">
+            ${normalizeCustomSections(data.customSections).map((section, index) => buildCustomSectionEditor(section, index)).join("") || '<p class="admin-custom-sections-empty">No hay secciones extra. Puedes agregar hasta 3.</p>'}
+          </div>
+        </section>
         <p class="admin-editor-help" id="admin-editor-help">
           Escribe cada elemento en una línea. Listas: Título | Descripción. Recursos: Título | Descripción | URL | Tipo.
         </p>
@@ -507,6 +876,10 @@ function renderNotFound() {
 }
 
 function renderServiceDetail(data) {
+  data = {
+    ...data,
+    customSections: normalizeCustomSections(data.customSections),
+  };
   document.title = `${data.name} | CercaRed`;
   window.CercaRedCurrentService = data;
 
@@ -575,6 +948,7 @@ function renderServiceDetail(data) {
 
         ${renderChecklist(data.checklist)}
         ${renderResources(data.resources)}
+        ${renderCustomSections(data.customSections)}
 
         <a class="official-channel" href="${data.officialUrl}" target="_blank" rel="noreferrer">
           Ir al canal oficial →
@@ -660,7 +1034,16 @@ function buildSummary(data) {
   const steps = data.steps.map((item, index) => `${index + 1}. ${item.title}`).join("\n");
   const checklist = (data.checklist || []).map((item) => `- ${item.title}`).join("\n");
   const resources = (data.resources || []).map((item) => `- ${item.title}: ${item.url}`).join("\n");
-  return `${data.name}\n\nRequisitos principales:\n${requirements}\n\nPasos:\n${steps}${checklist ? `\n\nChecklist:\n${checklist}` : ""}${resources ? `\n\nRecursos utiles:\n${resources}` : ""}\n\nCanal oficial: ${data.officialUrl}`;
+  const extraSections = normalizeCustomSections(data.customSections)
+    .map((section) => {
+      if (section.kind === "text") return `${section.title}:\n${section.content}`;
+      if (section.kind === "select") return `${section.title}:\n- ${section.value || section.options[0] || "Por verificar"}`;
+      if (section.kind === "resources") return `${section.title}:\n${section.items.map((item) => `- ${item.title}: ${item.url}`).join("\n")}`;
+      return `${section.title}:\n${section.items.map((item) => `- ${item.title}`).join("\n")}`;
+    })
+    .join("\n\n");
+
+  return `${data.name}\n\nRequisitos principales:\n${requirements}\n\nPasos:\n${steps}${checklist ? `\n\nChecklist:\n${checklist}` : ""}${resources ? `\n\nRecursos utiles:\n${resources}` : ""}${extraSections ? `\n\n${extraSections}` : ""}\n\nCanal oficial: ${data.officialUrl}`;
 }
 
 function showDetailToast(message) {
@@ -711,6 +1094,8 @@ function wireDetailActions(data) {
   const clearImageButton = document.querySelector("#admin-clear-image");
   const aiRefreshButton = document.querySelector("#admin-refresh-with-ai");
   const aiSourcesField = document.querySelector("#admin-edit-ai-sources");
+  const customSectionsContainer = document.querySelector("#admin-edit-custom-sections");
+  const addCustomSectionButton = document.querySelector("#admin-add-custom-section");
 
   function openAdminEditor() {
     if (!adminEditor) return;
@@ -770,6 +1155,24 @@ function wireDetailActions(data) {
 
   adminOpenButton?.addEventListener("click", openAdminEditor);
   adminCloseButton?.addEventListener("click", closeAdminEditor);
+  addCustomSectionButton?.addEventListener("click", () => addCustomSectionEditor(customSectionsContainer));
+
+  customSectionsContainer?.addEventListener("click", (event) => {
+    const removeButton = event.target.closest(".admin-custom-section-remove");
+    if (!removeButton) return;
+    removeButton.closest("[data-custom-section]")?.remove();
+    if (!customSectionsContainer.querySelector("[data-custom-section]")) {
+      renderCustomSectionsEditor(customSectionsContainer, []);
+    }
+  });
+
+  customSectionsContainer?.addEventListener("change", (event) => {
+    const card = event.target.closest("[data-custom-section]");
+    if (!card) return;
+    if (event.target.matches("[data-custom-kind]")) {
+      syncCustomSectionCard(card);
+    }
+  });
 
   if (window.location.hash === "#admin-service-editor") {
     window.requestAnimationFrame(openAdminEditor);
@@ -796,6 +1199,7 @@ function wireDetailActions(data) {
       channels: validateSectionField("#admin-edit-channels", "Canales de atención", errors),
       resources: validateResourceField("#admin-edit-resources", "Recursos útiles", errors),
       checklist: validateOptionalSectionField("#admin-edit-checklist", "Checklist", errors),
+      customSections: validateCustomSections(customSectionsContainer, errors),
       image: imageData?.value.trim() || "",
     };
 
@@ -932,6 +1336,36 @@ function buildSummaryModal(data) {
   const resourceItems = (data.resources || [])
     .map((r) => `<li class="summary-modal-channel">${r.title}. ${r.url}</li>`)
     .join("");
+
+  const extraSectionBlocks = normalizeCustomSections(data.customSections)
+    .map((section) => {
+      if (section.kind === "text") {
+        return `
+          <div>
+            <h3 class="summary-modal-section-title">${escapeHtml(section.title)}</h3>
+            <div class="summary-modal-text">${escapeHtml(section.content)}</div>
+          </div>
+        `;
+      }
+      if (section.kind === "select") {
+        return `
+          <div>
+            <h3 class="summary-modal-section-title">${escapeHtml(section.title)}</h3>
+            <ul class="summary-modal-channels"><li class="summary-modal-channel">${escapeHtml(section.value || section.options[0] || "Por verificar")}</li></ul>
+          </div>
+        `;
+      }
+      const entries = section.kind === "resources"
+        ? section.items.map((item) => `<li class="summary-modal-channel">${escapeHtml(item.title)}. ${escapeHtml(item.url)}</li>`).join("")
+        : section.items.map((item) => `<li class="summary-modal-channel">${escapeHtml(item.title)}. ${escapeHtml(item.description)}</li>`).join("");
+      return `
+        <div>
+          <h3 class="summary-modal-section-title">${escapeHtml(section.title)}</h3>
+          <ul class="summary-modal-channels">${entries}</ul>
+        </div>
+      `;
+    })
+    .join("");
  
   return `
     <div
@@ -991,6 +1425,12 @@ function buildSummaryModal(data) {
                 <ul class="summary-modal-channels">${resourceItems}</ul>
               </div>
             ` : ""}
+          </div>
+        ` : ""}
+
+        ${extraSectionBlocks ? `
+          <div class="summary-modal-grid">
+            ${extraSectionBlocks}
           </div>
         ` : ""}
  
@@ -1124,6 +1564,19 @@ function downloadSummaryPDF(data) {
   agregarSeccion("CANALES DE ATENCIÓN", data.channels, true);
   agregarSeccion("CHECKLIST", data.checklist, true);
   agregarSeccion("RECURSOS ÚTILES", data.resources, true);
+  normalizeCustomSections(data.customSections).forEach((section) => {
+    if (section.kind === "text") {
+      agregarSeccion(section.title.toUpperCase(), section.content, false);
+      return;
+    }
+    if (section.kind === "select") {
+      agregarSeccion(section.title.toUpperCase(), [{ title: section.value || section.options[0] || "Por verificar" }], true);
+      return;
+    }
+    agregarSeccion(section.title.toUpperCase(), section.kind === "resources"
+      ? section.items.map((item) => ({ title: item.title, description: item.url }))
+      : section.items, true);
+  });
 
   if (currentY > 260) {
     doc.addPage();
