@@ -51,6 +51,20 @@ function stripHtml(html) {
     .trim();
 }
 
+function extractModelText(messageContent) {
+  if (typeof messageContent === "string") return messageContent;
+  if (!Array.isArray(messageContent)) return "";
+
+  return messageContent
+    .map((item) => {
+      if (typeof item === "string") return item;
+      if (item?.type === "text" && typeof item.text === "string") return item.text;
+      return "";
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
 async function fetchUrlText(url) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
@@ -134,10 +148,10 @@ export default async function handler(request, response) {
     return response.status(405).json({ error: "Metodo no permitido." });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return response.status(500).json({
-      error: "Falta configurar OPENAI_API_KEY en Vercel."
+      error: "Falta configurar GEMINI_API_KEY en Vercel."
     });
   }
 
@@ -157,92 +171,78 @@ export default async function handler(request, response) {
       });
     }
 
-    const openaiResponse = await fetch("https://api.openai.com/v1/responses", {
+    const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || "gpt-5.5",
-        input: [
+        model: process.env.GEMINI_MODEL || "gemini-3.1-flash-lite",
+        response_format: { type: "json_object" },
+        messages: [
           {
             role: "system",
             content: [
-              {
-                type: "input_text",
-                text: [
-                  "Eres un asistente para administradores de CercaRed.",
-                  "Crea un borrador de servicio social basado solo en las fuentes entregadas.",
-                  "No inventes requisitos, costos, canales ni enlaces. Si falta un dato, escribe 'Por verificar'.",
-                  "Si las fuentes incluyen enlaces leidos, usa esos textos como fuente principal.",
-                  "Extrae recursos utiles oficiales cuando existan, como consultas de afiliacion, formularios, cronogramas o paginas informativas.",
-                  "Crea un checklist breve con acciones concretas que el ciudadano pueda marcar antes de iniciar el tramite.",
-                  "Responde solo JSON valido, sin markdown."
-                ].join(" ")
-              }
-            ]
+              "Eres un asistente para administradores de CercaRed.",
+              "Crea un borrador de servicio social basado solo en las fuentes entregadas.",
+              "No inventes requisitos, costos, canales ni enlaces. Si falta un dato, escribe 'Por verificar'.",
+              "Si las fuentes incluyen enlaces leidos, usa esos textos como fuente principal.",
+              "Extrae recursos utiles oficiales cuando existan, como consultas de afiliacion, formularios, cronogramas o paginas informativas.",
+              "Crea un checklist breve con acciones concretas que el ciudadano pueda marcar antes de iniciar el tramite.",
+              "Responde solo JSON valido, sin markdown."
+            ].join(" ")
           },
           {
             role: "user",
             content: [
-              {
-                type: "input_text",
-                text: [
-                  "Genera un JSON con esta forma exacta:",
-                  "{",
-                  "\"name\":\"\",",
-                  "\"entity\":\"\",",
-                  "\"category\":\"Social|Salud|Educación|Vivienda|Adulto mayor\",",
-                  "\"description\":\"\",",
-                  "\"shortDescription\":\"\",",
-                  "\"district\":\"Nacional\",",
-                  "\"modality\":\"Presencial|Virtual|Mixta\",",
-                  "\"attention\":\"\",",
-                  "\"scope\":\"\",",
-                  "\"cost\":\"\",",
-                  "\"officialUrl\":\"\",",
-                  "\"requirements\":[{\"title\":\"\",\"description\":\"\"}],",
-                  "\"documents\":[{\"title\":\"\",\"description\":\"\"}],",
-                  "\"steps\":[{\"title\":\"\",\"description\":\"\"}],",
-                  "\"channels\":[{\"title\":\"\",\"description\":\"\"}],",
-                  "\"resources\":[{\"title\":\"\",\"description\":\"\",\"url\":\"\",\"type\":\"consulta|información|formulario|cronograma|ubicación|otro\"}],",
-                  "\"checklist\":[{\"title\":\"\",\"description\":\"\"}]",
-                  "}",
-                  "",
-                  "Enlaces enviados por el administrador:",
-                  urls.length ? urls.join("\n") : "No se enviaron enlaces.",
-                  "",
-                  "Texto extraido y notas:",
-                  context
-                ].join("\n")
-              }
-            ]
+              "Genera un JSON con esta forma exacta:",
+              "{",
+              "\"name\":\"\",",
+              "\"entity\":\"\",",
+              "\"category\":\"Social|Salud|Educación|Vivienda|Adulto mayor\",",
+              "\"description\":\"\",",
+              "\"shortDescription\":\"\",",
+              "\"district\":\"Nacional\",",
+              "\"modality\":\"Presencial|Virtual|Mixta\",",
+              "\"attention\":\"\",",
+              "\"scope\":\"\",",
+              "\"cost\":\"\",",
+              "\"officialUrl\":\"\",",
+              "\"requirements\":[{\"title\":\"\",\"description\":\"\"}],",
+              "\"documents\":[{\"title\":\"\",\"description\":\"\"}],",
+              "\"steps\":[{\"title\":\"\",\"description\":\"\"}],",
+              "\"channels\":[{\"title\":\"\",\"description\":\"\"}],",
+              "\"resources\":[{\"title\":\"\",\"description\":\"\",\"url\":\"\",\"type\":\"consulta|información|formulario|cronograma|ubicación|otro\"}],",
+              "\"checklist\":[{\"title\":\"\",\"description\":\"\"}]",
+              "}",
+              "",
+              "Enlaces enviados por el administrador:",
+              urls.length ? urls.join("\n") : "No se enviaron enlaces.",
+              "",
+              "Texto extraido y notas:",
+              context
+            ].join("\n")
           }
         ]
       })
     });
 
-    const payload = await openaiResponse.json();
-    if (!openaiResponse.ok) {
-      return response.status(openaiResponse.status).json({
-        error: payload.error?.message || "OpenAI no pudo generar el borrador."
+    const payload = await geminiResponse.json();
+    if (!geminiResponse.ok) {
+      return response.status(geminiResponse.status).json({
+        error: payload.error?.message || "Gemini no pudo generar el borrador."
       });
     }
 
-    const text = payload.output_text
-      || payload.output?.flatMap((item) => item.content || [])
-        .map((content) => content.text)
-        .filter(Boolean)
-        .join("\n")
-      || "";
+    const text = extractModelText(payload.choices?.[0]?.message?.content);
     const jsonText = text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
     const service = JSON.parse(jsonText);
 
     return response.status(200).json({ service, warnings: failedPages });
   } catch (error) {
     return response.status(500).json({
-      error: "No se pudo convertir la respuesta de IA en un servicio editable."
+      error: "No se pudo convertir la respuesta de Gemini en un servicio editable."
     });
   }
 }
