@@ -59,7 +59,16 @@
 }
 
 .detail-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: var(--space-5);
+  align-items: start;
   margin-bottom: var(--space-8);
+}
+
+.detail-hero-copy {
+  display: grid;
+  gap: var(--space-3);
 }
 
 .detail-hero h1,
@@ -77,6 +86,15 @@
   color: #111827;
   font-size: 20px;
   line-height: 32px;
+}
+
+.detail-hero-image {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  object-fit: cover;
+  background: #f8fafc;
 }
 
 .admin-detail-panel {
@@ -229,6 +247,76 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
+}
+
+.admin-image-field {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.admin-image-field-copy {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.admin-image-field-copy p {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 22px;
+}
+
+.admin-image-field-copy span {
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.admin-image-field-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.admin-service-image-preview {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  object-fit: cover;
+  background: #ffffff;
+}
+
+.admin-image-field-actions {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.admin-image-field-actions button {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-primary);
+  border-radius: 10px;
+  color: var(--color-primary);
+  background: var(--color-surface);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-image-field-actions button:hover,
+.admin-image-field-actions button:focus-visible {
+  background: var(--color-soft);
 }
 
 .admin-service-form label {
@@ -760,6 +848,10 @@
     width: min(100% - 64px, 1440px);
   }
 
+  .detail-hero {
+    grid-template-columns: 1fr;
+  }
+
   .detail-layout {
     grid-template-columns: 1fr;
     gap: var(--space-6);
@@ -806,6 +898,10 @@
   .detail-sidebar {
     grid-template-columns: 1fr;
     gap: var(--space-5);
+  }
+
+  .admin-image-field-layout {
+    grid-template-columns: 1fr;
   }
 
   .detail-lower,

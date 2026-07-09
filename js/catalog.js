@@ -4,6 +4,7 @@ let services = [];
 let currentPage = 1;
 const SERVICES_PER_PAGE = 6;
 let currentFilteredServices = [];
+const MAX_IMAGE_SIZE_BYTES = 350_000;
 
 // ========================================================
 // UTILERÍAS Y FORMATO
@@ -41,6 +42,62 @@ function isServiceInactive(serviceId) {
   return services.find((service) => service.id === serviceId)?.active === false;
 }
 
+function getImageHelpers() {
+  return window.CercaRedServiceImages || {};
+}
+
+function createServiceImageElement(service, className = "service-card-image") {
+  const img = document.createElement("img");
+  const helpers = getImageHelpers();
+  const candidates = helpers.getServiceImageCandidates?.(service) || ["assets/images/cards/default.svg"];
+  img.className = className;
+  img.alt = service?.name ? `Imagen de ${service.name}` : "Imagen del servicio";
+  img.loading = "lazy";
+  helpers.attachFallback?.(img, candidates);
+  if (!img.src) {
+    img.src = candidates[0];
+  }
+  return img;
+}
+
+function readImageFile(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve("");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("Adjunta una imagen en formato JPG, PNG, WebP o SVG."));
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      reject(new Error("La imagen supera 350 KB. Usa un archivo más liviano."));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(new Error("No se pudo leer la imagen seleccionada."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function updateImagePreview(preview, serviceLike) {
+  if (!preview) return;
+
+  const helpers = getImageHelpers();
+  const candidates = helpers.getServiceImageCandidates?.(serviceLike) || ["assets/images/cards/default.svg"];
+  preview.alt = serviceLike?.name
+    ? `Vista previa de ${serviceLike.name}`
+    : "Vista previa de la imagen del servicio";
+  helpers.attachFallback?.(preview, candidates);
+  if (!preview.src) {
+    preview.src = candidates[0];
+  }
+}
+
 // ========================================================
 // GESTIÓN DEL CATÁLOGO
 // ========================================================
@@ -69,10 +126,6 @@ function createServiceCard(service) {
   article.dataset.serviceId = service.id;
 
   article.innerHTML = `
-    <img class="service-card-image" src="assets/images/cards/${service.id}.jpg" alt="" aria-hidden="true"
-         onerror="if(!this.dataset.t){this.dataset.t='png';this.src='assets/images/cards/${service.id}.png';}
-                  else if(this.dataset.t==='png'){this.dataset.t='webp';this.src='assets/images/cards/${service.id}.webp';}
-                  else{this.dataset.t='def';this.src='assets/images/cards/default.png';this.onerror=null;}">
     <div class="service-card-header">
       <div class="service-card-tags">
         <span class="service-category">${service.category || "General"}</span>
@@ -98,6 +151,8 @@ function createServiceCard(service) {
       ` : ""}
     </div>
   `;
+
+  article.prepend(createServiceImageElement(service));
 
   return article;
 }
@@ -294,6 +349,7 @@ function createServiceFromForm() {
   const channels = validateSectionTextarea("#admin-ai-channels", "Canales", errors);
   const resources = validateResourceTextarea("#admin-ai-resources", "Recursos útiles", errors);
   const checklist = validateSectionTextarea("#admin-ai-checklist", "Checklist", errors);
+  const image = document.querySelector("#admin-ai-image-data")?.value.trim() || "";
 
   renderAiValidation(errors);
   if (errors.length > 0) {
@@ -328,6 +384,7 @@ function createServiceFromForm() {
     channels,
     resources,
     checklist,
+    image,
   };
 }
 
@@ -349,6 +406,8 @@ function fillAiServiceForm(service) {
   document.querySelector("#admin-ai-channels").value = formatSectionItems(service.channels);
   document.querySelector("#admin-ai-resources").value = formatResourceItems(service.resources);
   document.querySelector("#admin-ai-checklist").value = formatSectionItems(service.checklist);
+  document.querySelector("#admin-ai-image-data").value = service.image || "";
+  updateImagePreview(document.querySelector("#admin-ai-image-preview"), service);
 }
 
 function buildAiServiceModal() {
@@ -370,6 +429,20 @@ https://www.gob.pe/...
 
 Opcional: agrega notas, requisitos, canales o costos si la web no se puede leer."></textarea>
           </label>
+          <section class="admin-ai-image-block admin-ai-full" aria-labelledby="admin-ai-image-title">
+            <div class="admin-ai-image-copy">
+              <p class="admin-ai-image-label" id="admin-ai-image-title">Imagen del servicio</p>
+              <p class="admin-ai-image-note">Puedes subir una portada ahora o dejar la imagen por defecto del catálogo.</p>
+            </div>
+            <div class="admin-ai-image-layout">
+              <img class="admin-ai-image-preview" id="admin-ai-image-preview" src="assets/images/cards/default.svg" alt="Vista previa de la imagen del servicio" />
+              <div class="admin-ai-image-actions">
+                <input id="admin-ai-image-file" type="file" accept="image/png, image/jpeg, image/webp, image/svg+xml" />
+                <input id="admin-ai-image-data" type="hidden" />
+                <button class="admin-ai-image-clear" id="admin-ai-image-clear" type="button">Quitar imagen cargada</button>
+              </div>
+            </div>
+          </section>
           <div class="admin-ai-actions admin-ai-full">
             <button class="admin-ai-generate" type="button">Generar borrador con IA</button>
           </div>
@@ -478,6 +551,10 @@ function openAiServiceModal() {
   const generateButton = modal.querySelector(".admin-ai-generate");
   const form = modal.querySelector("#admin-ai-form");
   const saveButton = form.querySelector(".admin-ai-save");
+  const imagePreview = modal.querySelector("#admin-ai-image-preview");
+  const imageInput = modal.querySelector("#admin-ai-image-file");
+  const imageData = modal.querySelector("#admin-ai-image-data");
+  const imageClearButton = modal.querySelector("#admin-ai-image-clear");
   let pendingServiceToSave = null;
 
   const closeModal = () => {
@@ -487,11 +564,13 @@ function openAiServiceModal() {
 
   const closeWithConfirmation = () => {
     const hasContent = Array.from(modal.querySelectorAll("input, textarea"))
-      .some((field) => field.value.trim());
+      .some((field) => field.type === "file" ? field.files?.length : field.value.trim());
     if (!hasContent || window.confirm("Hay información sin guardar. ¿Cerrar de todos modos?")) {
       closeModal();
     }
   };
+
+  updateImagePreview(imagePreview, {});
 
   closeButton.addEventListener("click", closeWithConfirmation);
   cancelButton.addEventListener("click", closeWithConfirmation);
@@ -537,6 +616,42 @@ function openAiServiceModal() {
   form.addEventListener("input", () => {
     pendingServiceToSave = null;
     saveButton.textContent = "Agregar al catálogo";
+  });
+
+  imageInput.addEventListener("change", async () => {
+    pendingServiceToSave = null;
+    saveButton.textContent = "Agregar al catálogo";
+
+    try {
+      const file = imageInput.files?.[0];
+      const image = await readImageFile(file);
+      imageData.value = image;
+      updateImagePreview(imagePreview, {
+        id: document.querySelector("#admin-ai-name")?.value || "",
+        name: document.querySelector("#admin-ai-name")?.value || "Servicio",
+        image,
+      });
+      setAiMessage(file ? "Imagen cargada. Revisa el borrador y guarda cuando esté listo." : "", "info");
+    } catch (error) {
+      imageInput.value = "";
+      imageData.value = "";
+      updateImagePreview(imagePreview, {
+        id: document.querySelector("#admin-ai-name")?.value || "",
+      });
+      setAiMessage(error.message, "error");
+    }
+  });
+
+  imageClearButton.addEventListener("click", () => {
+    imageInput.value = "";
+    imageData.value = "";
+    pendingServiceToSave = null;
+    saveButton.textContent = "Agregar al catálogo";
+    updateImagePreview(imagePreview, {
+      id: document.querySelector("#admin-ai-name")?.value || "",
+      name: document.querySelector("#admin-ai-name")?.value || "Servicio",
+    });
+    setAiMessage("Se quitó la imagen personalizada. Se usará la imagen por defecto del servicio.", "warning");
   });
 
   form.addEventListener("submit", async (event) => {

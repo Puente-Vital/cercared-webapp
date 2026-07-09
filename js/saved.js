@@ -28,6 +28,7 @@
     entity: text(card, ".service-entity"),
     category: text(card, ".service-category"),
     description: text(card, ".service-description"),
+    image: card.querySelector(".service-card-image")?.currentSrc || card.querySelector(".service-card-image")?.src || "",
     url: card.dataset.serviceId
       ? `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, "")}detail.html?id=${encodeURIComponent(card.dataset.serviceId)}`
       : window.location.href,
